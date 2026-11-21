@@ -1,0 +1,4 @@
+exam,subject,topic,year,stem_text,option_a,option_b,option_c,option_d,correct_option,explanation_text
+JAMB,Physics,Motion,2019,"A car travels 100 m in 5 seconds. What is its average speed?",10 m/s,20 m/s,25 m/s,500 m/s,B,"Average speed = distance ÷ time = 100 ÷ 5 = 20 m/s."
+WAEC,Mathematics,Quadratic Equations,2021,"Solve x^2 - 5x + 6 = 0.","x = 1 or 6","x = 2 or 3","x = -2 or -3","x = -1 or 6",B,"Factorise: (x - 2)(x - 3) = 0, so x = 2 or x = 3."
+JAMB,English Language,Synonyms,2020,"Choose the word nearest in meaning to the underlined word: The manager was very FRUGAL with company funds.",wasteful,careful,thrifty,generous,C,"Frugal means using money carefully and avoiding waste, which is the same as thrifty."
