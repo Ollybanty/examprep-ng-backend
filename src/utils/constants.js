@@ -1,10 +1,10 @@
-// Shared fixed values: import these instead of typing the strings
+// Fixed values we share across the app. Import these instead of typing the strings
 
 export const ROLES = {
   STUDENT: 'student',
   TEACHER: 'teacher',
   ADMIN: 'admin',
-  // PARENT: 'parent', // MMP (post-launch)
+  // PARENT: 'parent', // coming after launch
 };
 
 // Teachers can sign up, but an admin must approve them before they get full access
@@ -24,7 +24,7 @@ export const OTP_PURPOSES = {
   RESET_PASSWORD: 'reset_password',
 };
 
-// Draft → Reviewed → Published, or Flagged when a student reports it
+// Draft, then Reviewed, then Published. Flagged means a student reported it
 export const QUESTION_STATUS = {
   DRAFT: 'draft',
   REVIEWED: 'reviewed',
@@ -64,24 +64,26 @@ export const REPORT_STATUS = {
   REJECTED: 'rejected',
 };
 
-// Business rules from the PRD and the Technical Documentation
+// Rules from the PRD and the Technical Documentation
 export const RULES = {
   MIN_SUBJECTS: 4,
   MAX_SUBJECTS: 6,
   OTP_LENGTH: 6,
   OTP_EXPIRY_MINUTES: 10,
   OTP_MAX_ATTEMPTS: 5,
-  CBT_GRACE_SECONDS: 5, // late answers within 5 seconds of expiry are still accepted (B4.1)
-  MASTERY_WINDOW: 30, // last 30 answers in a topic (B4.2)
-  MASTERY_MIN_ATTEMPTS: 5, // fewer than 5 answers = unrated
-  MASTERY_WEAK_BELOW: 60, // below 60% = weak
-  MASTERY_STRONG_FROM: 80, // 80% and above = strong; 60–79% = developing
+  OTP_RESEND_COOLDOWN_SECONDS: 60, // how long to wait before sending another code
+  PASSWORD_MIN_LENGTH: 8,
+  CBT_GRACE_SECONDS: 5, // we still accept answers that arrive up to 5 seconds late (B4.1)
+  MASTERY_WINDOW: 30, // only the last 30 answers in a topic count (B4.2)
+  MASTERY_MIN_ATTEMPTS: 5, // under 5 answers means not rated yet
+  MASTERY_WEAK_BELOW: 60, // under 60% is weak
+  MASTERY_STRONG_FROM: 80, // 80% and up is strong, 60 to 79% is developing
   FREE_PRACTICE_PER_DAY: 15,
   FREE_CBT_PER_MONTH: 1,
-  QUOTA_TIMEZONE: 'Africa/Lagos', // DEC-05: limits reset at midnight Lagos time
+  QUOTA_TIMEZONE: 'Africa/Lagos', // quotas reset at midnight Lagos time (DEC 05)
   JOIN_CODE_LENGTH: 6,
   ADMIN_INVITE_EXPIRY_HOURS: 48,
 };
 
-// Gives every collection created_at / updated_at, matching the docs' snake_case fields
+// Adds created_at and updated_at to every collection, in snake_case like the docs
 export const TIMESTAMPS = { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } };
