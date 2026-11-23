@@ -21,3 +21,5 @@ export const registerLimiter = limiter(10, 15);
 export const loginLimiter = limiter(10, 15);
 export const verifyOtpLimiter = limiter(10, 15);
 export const resendOtpLimiter = limiter(5, 15);
+export const forgotPasswordLimiter = limiter(5, 15);
+export const resetPasswordLimiter = limiter(10, 15);

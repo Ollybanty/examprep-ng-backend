@@ -18,6 +18,19 @@ const codeRule = body('code')
   .matches(new RegExp(`^\\d{${RULES.OTP_LENGTH}}$`))
   .withMessage(`Code must be ${RULES.OTP_LENGTH} digits`);
 
+// Password strength rules shared by register and reset password
+const passwordRule = (field, label = 'Password') =>
+  body(field)
+    .isString()
+    .withMessage(`${label} is required`)
+    .bail()
+    .isLength({ min: RULES.PASSWORD_MIN_LENGTH })
+    .withMessage(`${label} must be at least ${RULES.PASSWORD_MIN_LENGTH} characters`)
+    .matches(/[A-Za-z]/)
+    .withMessage(`${label} must contain a letter`)
+    .matches(/\d/)
+    .withMessage(`${label} must contain a number`);
+
 export const registerRules = [
   body('full_name')
     .trim()
@@ -26,16 +39,7 @@ export const registerRules = [
     .isLength({ max: 100 })
     .withMessage('Full name must be at most 100 characters'),
   emailRule,
-  body('password')
-    .isString()
-    .withMessage('Password is required')
-    .bail()
-    .isLength({ min: RULES.PASSWORD_MIN_LENGTH })
-    .withMessage(`Password must be at least ${RULES.PASSWORD_MIN_LENGTH} characters`)
-    .matches(/[A-Za-z]/)
-    .withMessage('Password must contain a letter')
-    .matches(/\d/)
-    .withMessage('Password must contain a number'),
+  passwordRule('password'),
   body('phone')
     .optional({ values: 'falsy' })
     .trim()
@@ -52,3 +56,22 @@ export const registerRules = [
 export const verifyOtpRules = [emailRule, codeRule];
 
 export const resendOtpRules = [emailRule];
+
+export const forgotPasswordRules = [emailRule];
+
+export const resetPasswordRules = [
+  emailRule,
+  codeRule,
+  passwordRule('new_password', 'New password'),
+];
+
+// No strength rules at login, so older accounts still work if the rules ever change
+export const loginRules = [
+  emailRule,
+  body('password')
+    .isString()
+    .withMessage('Password is required')
+    .bail()
+    .notEmpty()
+    .withMessage('Password is required'),
+];
