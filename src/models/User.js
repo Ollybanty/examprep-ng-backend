@@ -7,16 +7,16 @@ const userSchema = new Schema(
   {
     full_name: { type: String, required: true, trim: true, maxlength: 100 },
 
-    // At least one of email or phone is required (checked below)
-    email: { type: String, trim: true, lowercase: true },
-    phone: { type: String, trim: true },
+    // Email is required because we send codes by email. Phone is optional and saved as +234...
+    email: { type: String, required: true, trim: true, lowercase: true },
+    phone: { type: String, trim: true, default: undefined },
 
-    // Hidden unless a query uses .select('+password_hash')
+    // Not returned unless we ask for it with .select('+password_hash')
     password_hash: { type: String, required: true, select: false },
 
     role: { type: String, enum: Object.values(ROLES), default: ROLES.STUDENT },
 
-    // Teachers only: pending teachers can log in but can't use teacher features
+    // Only for teachers. A pending teacher can log in but can't use teacher features yet
     teacher_status: { type: String, enum: [...Object.values(TEACHER_STATUS), null], default: null },
 
     target_exam: { type: Schema.Types.ObjectId, ref: 'Exam', default: null },
@@ -24,7 +24,7 @@ const userSchema = new Schema(
       type: [{ type: Schema.Types.ObjectId, ref: 'Subject' }],
       default: [],
       validate: {
-        // Empty before onboarding, then 4–6 subjects
+        // Empty until onboarding, then 4 to 6 subjects
         validator: (subjects) =>
           subjects.length === 0 ||
           (subjects.length >= RULES.MIN_SUBJECTS && subjects.length <= RULES.MAX_SUBJECTS),
@@ -34,14 +34,14 @@ const userSchema = new Schema(
 
     plan_tier: { type: String, enum: Object.values(PLAN_TIERS), default: PLAN_TIERS.FREE },
     is_verified: { type: Boolean, default: false },
-    focus_mode_enabled: { type: Boolean, default: true }, // Focus Mode is ON by default (PRD)
-    is_active: { type: Boolean, default: true }, // admins can deactivate accounts
+    focus_mode_enabled: { type: Boolean, default: true }, // Focus Mode is on by default (PRD)
+    is_active: { type: Boolean, default: true }, // admins can deactivate an account
     last_login_at: { type: Date, default: null },
   },
   TIMESTAMPS,
 );
 
-// Unique only when present (a user may have email, phone or both)
+// Email and phone must be unique. The phone check only counts users who added a phone
 userSchema.index(
   { email: 1 },
   { unique: true, partialFilterExpression: { email: { $type: 'string' } } },
@@ -52,10 +52,7 @@ userSchema.index(
 );
 
 userSchema.pre('validate', function () {
-  if (!this.email && !this.phone) {
-    this.invalidate('email', 'Either email or phone is required');
-  }
-  // New teachers start as pending; other roles have no teacher status
+  // New teachers start as pending. Other roles don't need a teacher status
   if (this.role === ROLES.TEACHER && !this.teacher_status) {
     this.teacher_status = TEACHER_STATUS.PENDING;
   }
