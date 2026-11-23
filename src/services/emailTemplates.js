@@ -14,3 +14,16 @@ It expires in ${RULES.OTP_EXPIRY_MINUTES} minutes. If you didn't create an ExamP
 ExamPrep NG`,
   };
 }
+
+export function passwordResetEmail(name, code) {
+  return {
+    subject: 'Your ExamPrep NG password reset code',
+    text: `Hi ${name},
+
+We got a request to reset your ExamPrep NG password. Your reset code is: ${code}
+
+It expires in ${RULES.OTP_EXPIRY_MINUTES} minutes. If you didn't ask for this, you can ignore this email and your password will stay the same.
+
+ExamPrep NG`,
+  };
+}
