@@ -10,6 +10,9 @@ import docsRoutes from './routes/docsRoutes.js';
 
 const app = express();
 
+// Behind Render's proxy, this makes req.ip the user's real IP, so rate limits work per user
+app.set('trust proxy', env.trustProxy);
+
 // First, so even requests that fail later (e.g. bad JSON) are logged
 app.use(logger);
 
@@ -20,6 +23,8 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || env.corsOrigins.includes(origin)) return callback(null, true);
+      // Shows up in the logs, so a frontend CORS error is easy to trace
+      console.warn(`CORS blocked: ${origin} (add it to CORS_ORIGINS to allow it)`);
       return callback(null, false);
     },
   }),

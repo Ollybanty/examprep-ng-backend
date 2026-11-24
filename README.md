@@ -45,6 +45,31 @@ The page asks for a username and password. Set `DOCS_USERNAME` and `DOCS_PASSWOR
 - **Postman:** import `http://localhost:4000/api/docs/openapi.json` (with the same login) to get a ready made collection.
 - **Adding an endpoint:** update `docs/openapi.yaml` in the same PR, then restart the server to see it.
 
+## Deploying (Render)
+
+The live API runs on Render (free plan) with MongoDB Atlas. Render deploys the `main` branch automatically, so merging `dev` into `main` is a release.
+
+| Render setting    | Value            |
+| ----------------- | ---------------- |
+| Build command     | `npm ci`         |
+| Start command     | `npm start`      |
+| Health check path | `/api/v1/health` |
+
+Environment variables are set in Render's dashboard, never in the code:
+
+| Variable                         | Value on Render                                                |
+| -------------------------------- | -------------------------------------------------------------- |
+| `NODE_ENV`                       | `production`                                                   |
+| `MONGODB_URI`                    | The Atlas connection string                                    |
+| `JWT_SECRET`                     | A new random string, different from any laptop                 |
+| `EMAIL_PROVIDER`                 | `brevo` (Render's free plan blocks Gmail's SMTP ports)         |
+| `BREVO_API_KEY`, `EMAIL_USER`    | The Brevo API key, and the sender address confirmed in Brevo   |
+| `DOCS_USERNAME`, `DOCS_PASSWORD` | The login for `/api/docs`                                      |
+| `CORS_ORIGINS`                   | Every frontend address that calls the API, separated by commas |
+| `FRONTEND_URL`                   | The frontend's live address, used in invite links              |
+
+If the frontend sees a CORS error, check Render's logs for `CORS blocked: <address>` and add that address to `CORS_ORIGINS`.
+
 ## Scripts
 
 | Command                  | What it does                                              |
