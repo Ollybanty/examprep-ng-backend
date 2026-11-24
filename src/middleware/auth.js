@@ -56,11 +56,12 @@ export function requireApprovedTeacher(req, res, next) {
     throw new AppError(403, 'FORBIDDEN', 'You do not have permission to do this');
   }
   if (req.user.teacher_status !== TEACHER_STATUS.APPROVED) {
-    throw new AppError(
-      403,
-      'TEACHER_NOT_APPROVED',
-      'Your teacher account is waiting for admin approval',
-    );
+    // Same code for both, but a rejected teacher shouldn't be told they're still waiting
+    const message =
+      req.user.teacher_status === TEACHER_STATUS.REJECTED
+        ? 'Your teacher account was not approved. Kindly contact support'
+        : 'Your teacher account is waiting for admin approval';
+    throw new AppError(403, 'TEACHER_NOT_APPROVED', message);
   }
   next();
 }
