@@ -1,6 +1,6 @@
-import { body } from 'express-validator';
+import { body, query } from 'express-validator';
 import { OPTION_LABELS, RULES, SESSION_MODES } from '../utils/constants.js';
-import { idParamRule } from './commonValidators.js';
+import { idParamRule, paginationRules } from './commonValidators.js';
 
 // POST /sessions
 export const startSessionRules = [
@@ -42,3 +42,21 @@ export const saveAnswerRules = [
 
 // POST /sessions/:id/submit
 export const submitSessionRules = [idParamRule];
+
+// GET /sessions/:id/review
+export const reviewSessionRules = [idParamRule];
+
+// GET /sessions/history?mode=cbt&subject_id=...&page=1&limit=20
+export const sessionHistoryRules = [
+  query('mode')
+    .optional()
+    .isIn(Object.values(SESSION_MODES))
+    .withMessage('mode must be "practice" or "cbt"'),
+  query('subject_id').optional().isMongoId().withMessage('subject_id is not valid'),
+  ...paginationRules,
+];
+
+// GET /analytics/mastery?subject_id=...
+export const masteryRules = [
+  query('subject_id').optional().isMongoId().withMessage('subject_id is not valid'),
+];
