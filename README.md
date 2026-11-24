@@ -31,6 +31,20 @@ REST API for **ExamPrep NG**, a WAEC and JAMB exam practice platform: verified p
    ```
    Check it: `GET http://localhost:4000/api/v1/health`
 
+## API docs (Swagger)
+
+Every built endpoint is documented in [`docs/openapi.yaml`](docs/openapi.yaml) and shown at:
+
+```
+http://localhost:4000/api/docs
+```
+
+The page asks for a username and password. Set `DOCS_USERNAME` and `DOCS_PASSWORD` in `.env` to turn it on (the docs are off when either is empty). Ten wrong logins lock that IP out for 15 minutes.
+
+- **Try it out:** get a token from `/auth/login`, click **Authorize** and paste it in. The token is forgotten when the tab closes.
+- **Postman:** import `http://localhost:4000/api/docs/openapi.json` (with the same login) to get a ready made collection.
+- **Adding an endpoint:** update `docs/openapi.yaml` in the same PR, then restart the server to see it.
+
 ## Scripts
 
 | Command                  | What it does                                              |
@@ -99,4 +113,4 @@ Lists also return `pagination: { page, limit, total, pages }`.
 | Classes    | `POST /classes/join`                                                                                                                                                                           | Student            |
 | Admin      | `/admin/questions` (CRUD, status, `bulk-csv`) · `/admin/reports` · `/admin/teachers` · `/admin/invites` · `/admin/users` · `/admin/analytics`                                                  | Admin              |
 
-Endpoints that haven't been built yet return `501 NOT_IMPLEMENTED`. Full request and response examples will be added as each endpoint is built.
+Endpoints that haven't been built yet return `501 NOT_IMPLEMENTED`. Full request and response examples for the built ones are in the [API docs](#api-docs-swagger).

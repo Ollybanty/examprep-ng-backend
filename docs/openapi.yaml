@@ -1,0 +1,801 @@
+openapi: 3.0.3
+info:
+  title: ExamPrep NG API
+  version: 1.0.0
+  description: |
+    REST API for ExamPrep NG, a WAEC and JAMB exam practice platform.
+
+    **Authentication:** most routes need a token. Get one from `/auth/verify-otp`, `/auth/login`
+    or `/auth/accept-admin-invite`, then click **Authorize** and paste it (without "Bearer").
+
+    **Responses:** success is `{ data }`, plus `message` when useful and `pagination` for lists.
+    Errors are always `{ error: { code, message } }`. Validation errors also include `details`.
+
+    Endpoints that aren't built yet return `501 NOT_IMPLEMENTED` and are not listed here yet.
+    When you build an endpoint, add it to this file in the same PR.
+
+servers:
+  - url: /api/v1
+    description: This server
+
+tags:
+  - name: Health
+  - name: Auth
+    description: Sign up, email verification, login and password reset
+  - name: Profile
+    description: The logged in user's own account
+  - name: Admin users
+    description: Teacher approval, admin invites and user management (admins only)
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Check the server and database are up
+      security: []
+      responses:
+        '200':
+          description: Everything is up
+          content:
+            application/json:
+              example:
+                data: { status: ok, database: connected, time: '2026-11-24T10:00:00.000Z' }
+        '503':
+          description: The server is up but the database isn't connected
+          content:
+            application/json:
+              example:
+                data: { status: degraded, database: disconnected, time: '2026-11-24T10:00:00.000Z' }
+
+  # ---------- Auth ----------
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Create an account and email a 6 digit verification code
+      description: |
+        Role is `student` (default) or `teacher`. Nobody can register as admin.
+        Teachers start as `pending` until an admin approves them.
+        Phone is optional, must be Nigerian, and is saved as `+234...`.
+        Rate limit: 10 requests per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [full_name, email, password]
+              properties:
+                full_name: { type: string, maxLength: 100, example: Ada Obi }
+                email: { type: string, format: email, example: ada@example.com }
+                password:
+                  type: string
+                  minLength: 8
+                  description: At least 8 characters, with a letter and a number
+                  example: Password1
+                phone: { type: string, example: '08031234567' }
+                role: { type: string, enum: [student, teacher], default: student }
+      responses:
+        '201':
+          description: Account created, code sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    {
+                      type: string,
+                      example: Account created. Check your email for a 6-digit verification code,
+                    }
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: Email or phone already used
+          content:
+            application/json:
+              examples:
+                email:
+                  value:
+                    {
+                      error:
+                        {
+                          code: EMAIL_ALREADY_REGISTERED,
+                          message: An account with this email already exists. Log in,
+                          or request a new code if you have not verified it,
+                        },
+                    }
+                phone:
+                  value: { error: { code: DUPLICATE_VALUE, message: This phone is already in use } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify the email with the code, and get a login token
+      description: |
+        Codes last 10 minutes and allow 5 wrong tries. Each code works once.
+        Rate limit: 10 requests per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailAndCode' }
+      responses:
+        '200':
+          description: Verified. Pending teachers get a message about admin approval.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400':
+          description: Validation error, wrong code, or code expired or not found
+          content:
+            application/json:
+              examples:
+                wrong:
+                  value:
+                    { error: { code: OTP_INVALID, message: Incorrect code. 4 attempt(s) left } }
+                expired:
+                  value:
+                    {
+                      error:
+                        {
+                          code: OTP_EXPIRED,
+                          message: This code has expired or was not found. Kindly request a new one,
+                        },
+                    }
+        '409':
+          description: Already verified
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: ALREADY_VERIFIED,
+                      message: This account is already verified. Kindly log in instead,
+                    },
+                }
+        '429':
+          description: 5 wrong codes (the code is deleted), or too many requests
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: OTP_TOO_MANY_ATTEMPTS,
+                      message: Too many wrong codes. Kindly request a new one,
+                    },
+                }
+
+  /auth/resend-otp:
+    post:
+      tags: [Auth]
+      summary: Send a new verification code
+      description: |
+        Always gives the same reply, so it can't be used to check which emails are registered.
+        A new code is only sent if the last one is more than 60 seconds old.
+        Rate limit: 5 requests per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailOnly' }
+      responses:
+        '200':
+          description: Same reply every time
+          content:
+            application/json:
+              example:
+                {
+                  message: If an unverified account exists for this email,
+                  a new code has been sent,
+                }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with email and password
+      description: |
+        Pending teachers can log in; teacher only routes stay locked until an admin approves them.
+        Rate limit: 10 requests per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: student@test.local }
+                password: { type: string, example: Password123! }
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Wrong email or password (same message for both)
+          content:
+            application/json:
+              example:
+                { error: { code: INVALID_CREDENTIALS, message: Email or password is incorrect } }
+        '403':
+          description: Email not verified, or account disabled by an admin
+          content:
+            application/json:
+              examples:
+                unverified:
+                  value:
+                    {
+                      error:
+                        {
+                          code: ACCOUNT_NOT_VERIFIED,
+                          message: Kindly verify your email first. You can request a new code if yours has expired,
+                        },
+                    }
+                disabled:
+                  value:
+                    {
+                      error:
+                        {
+                          code: ACCOUNT_DISABLED,
+                          message: This account has been disabled. Kindly contact support,
+                        },
+                    }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Email a password reset code
+      description: |
+        Always gives the same reply. Disabled accounts get no code.
+        Rate limit: 5 requests per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailOnly' }
+      responses:
+        '200':
+          description: Same reply every time
+          content:
+            application/json:
+              example:
+                {
+                  message: If an account exists for this email,
+                  a password reset code has been sent to it,
+                }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Set a new password with the reset code
+      description: |
+        Same code rules as verify-otp. Using a reset code also verifies the email.
+        Rate limit: 10 requests per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, new_password]
+              properties:
+                email: { type: string, format: email, example: ada@example.com }
+                code: { type: string, pattern: '^\d{6}$', example: '123456' }
+                new_password:
+                  {
+                    type: string,
+                    minLength: 8,
+                    description: At least 8 characters,
+                    with a letter and a number,
+                    example: NewPass99,
+                  }
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              example: { message: Password updated. Kindly log in with your new password }
+        '400':
+          description: Validation error, wrong code, or code expired or not found
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: OTP_EXPIRED,
+                      message: This code has expired or was not found. Kindly request a new one,
+                    },
+                }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/accept-admin-invite:
+    post:
+      tags: [Auth]
+      summary: Create an admin account from an invite link
+      description: |
+        The token comes from the invite email link (`/accept-invite?token=...`).
+        Links last 48 hours and work once. Rate limit: 10 requests per 15 minutes.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, full_name, password]
+              properties:
+                token:
+                  {
+                    type: string,
+                    pattern: '^[a-f0-9]{64}$',
+                    description: 64 character token from the invite link,
+                  }
+                full_name: { type: string, maxLength: 100, example: New Admin }
+                password: { type: string, minLength: 8, example: Password1 }
+      responses:
+        '201':
+          description: Admin account created and logged in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400':
+          description: Validation error, or the link is wrong, expired or already used
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    { code: INVITE_INVALID, message: This invite link is invalid or has expired },
+                }
+        '409':
+          description: Someone registered with this email after the invite was sent
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    { code: EMAIL_ALREADY_REGISTERED, message: This email already has an account },
+                }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------- Profile ----------
+
+  /users/me:
+    get:
+      tags: [Profile]
+      summary: Get my profile
+      responses:
+        '200':
+          description: The logged in user, with exam and subjects filled in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /users/me/onboarding:
+    patch:
+      tags: [Profile]
+      summary: Choose an exam and 4 to 6 subjects (students only)
+      description: Can be called again later to change the exam or subjects.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exam_id, subject_ids]
+              properties:
+                exam_id: { $ref: '#/components/schemas/ObjectId' }
+                subject_ids:
+                  type: array
+                  minItems: 4
+                  maxItems: 6
+                  uniqueItems: true
+                  items: { $ref: '#/components/schemas/ObjectId' }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400':
+          description: Validation error, or a subject isn't offered for that exam
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: INVALID_SUBJECTS,
+                      message: One or more subjects are not offered for WAEC (WASSCE),
+                    },
+                }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Exam not found or not active
+          content:
+            application/json:
+              example: { error: { code: EXAM_NOT_FOUND, message: This exam was not found } }
+
+  /users/me/settings:
+    patch:
+      tags: [Profile]
+      summary: Update my settings
+      description: Only known settings are saved. Anything else in the body is ignored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                focus_mode_enabled: { type: boolean, example: false }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400':
+          description: Validation error, or no known setting was sent
+          content:
+            application/json:
+              example:
+                { error: { code: NO_SETTINGS, message: Send at least one setting to update } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------- Admin users ----------
+
+  /admin/teachers:
+    get:
+      tags: [Admin users]
+      summary: List teachers
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, rejected] }
+          description: Use `pending` to see teachers waiting for approval
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/UserList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/teachers/{id}/approval:
+    patch:
+      tags: [Admin users]
+      summary: Approve or reject a teacher
+      description: Emails the teacher the result. An admin can change a decision later.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approved, rejected] }
+      responses:
+        '200':
+          description: Decision saved and email sent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No teacher with this id
+          content:
+            application/json:
+              example: { error: { code: TEACHER_NOT_FOUND, message: This teacher was not found } }
+        '409':
+          description: The teacher already has this status
+          content:
+            application/json:
+              example: { error: { code: NO_CHANGE, message: This teacher is already approved } }
+
+  /admin/invites:
+    post:
+      tags: [Admin users]
+      summary: Invite someone to become an admin
+      description: |
+        Emails a link to `FRONTEND_URL/accept-invite?token=...` that lasts 48 hours.
+        Inviting the same email again replaces the old link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailOnly' }
+      responses:
+        '201':
+          description: Invite sent
+          content:
+            application/json:
+              example:
+                message: Invite sent
+                data:
+                  {
+                    invite:
+                      { email: new.admin@example.com, expires_at: '2026-11-26T10:00:00.000Z' },
+                  }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: This email already has an account
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    { code: EMAIL_ALREADY_REGISTERED, message: This email already has an account },
+                }
+
+  /admin/users:
+    get:
+      tags: [Admin users]
+      summary: List and search users
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string, enum: [student, teacher, admin] }
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 100 }
+          description: Matches name or email, ignoring case
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/UserList' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/users/{id}:
+    patch:
+      tags: [Admin users]
+      summary: Turn an account on or off, or change its plan
+      description: |
+        A turned off user is logged out straight away. Admins can't turn off their own account.
+        `plan_tier` lets us test Pro features before payments exist.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_active: { type: boolean, example: false }
+                plan_tier: { type: string, enum: [free, pro] }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400':
+          description: Validation error, nothing to change, or trying to turn off your own account
+          content:
+            application/json:
+              examples:
+                nothing:
+                  value:
+                    { error: { code: NO_CHANGES, message: Send is_active or plan_tier to update } }
+                self:
+                  value:
+                    {
+                      error:
+                        {
+                          code: CANNOT_DEACTIVATE_SELF,
+                          message: "You can't deactivate your own account",
+                        },
+                    }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No user with this id
+          content:
+            application/json:
+              example: { error: { code: USER_NOT_FOUND, message: This user was not found } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/ObjectId' }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  schemas:
+    ObjectId:
+      type: string
+      pattern: '^[a-f0-9]{24}$'
+      example: 6650f1a2b3c4d5e6f7a8b9c0
+
+    NameAndCode:
+      type: object
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        name: { type: string, example: Mathematics }
+        code: { type: string, example: mathematics }
+
+    User:
+      type: object
+      description: password_hash is never returned
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        full_name: { type: string, example: Ada Obi }
+        email: { type: string, example: ada@example.com }
+        phone: { type: string, example: '+2348031234567' }
+        role: { type: string, enum: [student, teacher, admin] }
+        teacher_status: { type: string, enum: [pending, approved, rejected], nullable: true }
+        target_exam:
+          description: An id, or name and code on profile routes. Null before onboarding.
+          nullable: true
+          oneOf:
+            - $ref: '#/components/schemas/ObjectId'
+            - $ref: '#/components/schemas/NameAndCode'
+        selected_subjects:
+          type: array
+          description: Ids, or name and code on profile routes. Empty before onboarding.
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/ObjectId'
+              - $ref: '#/components/schemas/NameAndCode'
+        plan_tier: { type: string, enum: [free, pro] }
+        is_verified: { type: boolean }
+        focus_mode_enabled: { type: boolean }
+        is_active: { type: boolean }
+        last_login_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    UserResponse:
+      type: object
+      properties:
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            user: { $ref: '#/components/schemas/User' }
+
+    TokenResponse:
+      type: object
+      properties:
+        message: { type: string, example: Logged in successfully }
+        data:
+          type: object
+          properties:
+            token: { type: string, description: Paste this into Authorize }
+            user: { $ref: '#/components/schemas/User' }
+
+    EmailOnly:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, example: ada@example.com }
+
+    EmailAndCode:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, format: email, example: ada@example.com }
+        code: { type: string, pattern: '^\d{6}$', example: '123456' }
+
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 42 }
+        pages: { type: integer, example: 3 }
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              description: Only on VALIDATION_ERROR, one item per failed rule
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  message: { type: string }
+
+  responses:
+    UserList:
+      description: One page of users
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+              pagination: { $ref: '#/components/schemas/Pagination' }
+    ValidationError:
+      description: The request body or query failed validation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Email is not valid
+              details: [{ field: email, message: Email is not valid }]
+    Unauthenticated:
+      description: Missing, invalid or expired token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: UNAUTHENTICATED, message: Please log in to continue } }
+    Forbidden:
+      description: Logged in, but not allowed (wrong role or email not verified)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: FORBIDDEN, message: You do not have permission to do this } }
+    TooManyRequests:
+      description: Rate limit reached
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            {
+              error:
+                { code: TOO_MANY_REQUESTS, message: Too many attempts. Try again in 15 minutes },
+            }
+
+security:
+  - bearerAuth: []

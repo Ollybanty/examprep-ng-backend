@@ -6,6 +6,7 @@ import { logger } from './middleware/logger.js';
 import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
+import docsRoutes from './routes/docsRoutes.js';
 
 const app = express();
 
@@ -28,6 +29,9 @@ app.use(
 app.use(express.json({ limit: '100kb' }));
 
 app.use('/api/v1', routes);
+
+// Swagger docs, behind a username and password. Off unless DOCS_USERNAME and DOCS_PASSWORD are set.
+if (env.docsUsername && env.docsPassword) app.use('/api/docs', docsRoutes);
 
 // These two must stay last
 app.use(notFound);

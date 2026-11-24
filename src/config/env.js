@@ -28,6 +28,9 @@ export const env = {
     .filter(Boolean),
   // Used for links in emails, e.g. FRONTEND_URL/accept-invite?token=...
   frontendUrl: (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, ''),
+  // The API docs at /api/docs are only turned on when both are set
+  docsUsername: process.env.DOCS_USERNAME || '',
+  docsPassword: process.env.DOCS_PASSWORD || '',
   alocToken: process.env.ALOC_TOKEN || '',
   alocBaseUrl: process.env.ALOC_BASE_URL || 'https://dev.aloc.com.ng/api/v1',
   groqApiKey: process.env.GROQ_API_KEY || '',

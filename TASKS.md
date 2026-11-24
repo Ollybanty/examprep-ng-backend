@@ -148,5 +148,6 @@ Every file you need to fill in already exists. It has a `// to be handled by:` l
 6. **Questions are saved with `.save()`**, never `findByIdAndUpdate`, or the "no publish without explanation" rule is skipped.
 7. **Never send `correct_option` or `explanation_text` to a student** before the right moment (practice: after answering; CBT: after submitting).
 8. **Owners only:** a student can only read their own sessions; a teacher only their own classes. Return 404 (not 403) for someone else's record.
-9. **Format before you push:** `npm run format`.
-10. **Never commit `.env`.**
+9. **Document every endpoint you build** in `docs/openapi.yaml`, in the same PR. Copy the shape of a Block 1 endpoint. Check it at `/api/docs`.
+10. **Format before you push:** `npm run format`.
+11. **Never commit `.env`.**
