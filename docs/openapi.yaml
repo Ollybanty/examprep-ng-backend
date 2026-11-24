@@ -24,6 +24,8 @@ tags:
     description: Sign up, email verification, login and password reset
   - name: Profile
     description: The logged in user's own account
+  - name: Sessions
+    description: Practice sessions and CBT mocks (students only)
   - name: Admin users
     description: Teacher approval, admin invites and user management (admins only)
 
@@ -468,6 +470,239 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  # ---------- Sessions ----------
+
+  /sessions:
+    post:
+      tags: [Sessions]
+      summary: Start a practice session or a CBT mock
+      description: |
+        **Practice:** pick how many questions (default 10, max 40) and optionally a topic, a year,
+        or your weak topics. Free students get at most what's left of today's 15 questions.
+
+        **CBT:** always the exam's own length and time (JAMB 40 questions in 30 minutes,
+        WAEC 50 in 60). Free students get 1 mock a month. If a mock is already running,
+        this returns it (200) instead of starting another.
+
+        Questions come back in a random order, without answers or explanations.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode, exam_id, subject_id]
+              properties:
+                mode: { type: string, enum: [practice, cbt] }
+                exam_id: { $ref: '#/components/schemas/ObjectId' }
+                subject_id: { $ref: '#/components/schemas/ObjectId' }
+                question_count:
+                  {
+                    type: integer,
+                    minimum: 1,
+                    maximum: 40,
+                    default: 10,
+                    description: Practice only,
+                  }
+                topic_id: { $ref: '#/components/schemas/ObjectId' }
+                year: { type: integer, example: 2018, description: Practice only }
+                weak_topics:
+                  {
+                    type: boolean,
+                    description: 'Practice only: questions from your weak topics. Not together with topic_id',
+                  }
+      responses:
+        '201':
+          description: Started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionResponse' }
+        '200':
+          description: A CBT mock was already running, so that one is returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionResponse' }
+        '400':
+          description: Validation error, a topic from another subject, or topic and weak topics together
+          content:
+            application/json:
+              example:
+                { error: { code: INVALID_TOPIC, message: This topic is not part of Mathematics } }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: Not a student, or the free plan limit is reached
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: QUOTA_EXCEEDED,
+                      message: 'Free plan: 15 practice questions a day. Come back tomorrow or upgrade to Pro',
+                    },
+                }
+        '404':
+          description: Exam or subject not found, or no questions match the filters
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: NO_QUESTIONS,
+                      message: No questions match your choice yet. Try other filters,
+                    },
+                }
+        '409':
+          description: Not enough questions for a full mock, or no weak topics yet
+          content:
+            application/json:
+              examples:
+                mock:
+                  value:
+                    {
+                      error:
+                        {
+                          code: NOT_ENOUGH_QUESTIONS,
+                          message: 'A JAMB mock needs 40 questions, but Physics only has 8 so far',
+                        },
+                    }
+                weak:
+                  value:
+                    {
+                      error:
+                        {
+                          code: NO_WEAK_TOPICS,
+                          message: "You have no weak topics in Mathematics yet. Keep practising and we'll find them",
+                        },
+                    }
+        '501':
+          description: Starting from a class assignment isn't built yet
+
+  /sessions/{id}:
+    get:
+      tags: [Sessions]
+      summary: Get a session, e.g. to carry on after a refresh
+      description: |
+        Returns the questions in the same order, the student's saved answers and flags,
+        and `seconds_remaining` for a running mock. A mock whose time ran out is submitted first.
+        Practice shows the correct answer for questions already answered. A mock never does here.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Not found, or it belongs to another student
+          content:
+            application/json:
+              example: { error: { code: SESSION_NOT_FOUND, message: This session was not found } }
+
+  /sessions/{id}/answer:
+    patch:
+      tags: [Sessions]
+      summary: Save an answer
+      description: |
+        **Practice:** the answer is final, and the reply says whether it was right, with the
+        explanation. Each first answer uses one of a free student's 15 daily questions.
+
+        **CBT:** answers can be changed or cleared (`null`) until time runs out, and the
+        reply is only `{ saved: true }`. Answers up to 5 seconds late are accepted.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question_id]
+              properties:
+                question_id: { $ref: '#/components/schemas/ObjectId' }
+                selected_option:
+                  {
+                    type: string,
+                    enum: [A, B, C, D],
+                    nullable: true,
+                    description: null clears a CBT answer,
+                  }
+                is_flagged_for_review: { type: boolean }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              examples:
+                practice:
+                  value:
+                    {
+                      data:
+                        {
+                          saved: true,
+                          is_correct: false,
+                          correct_option: B,
+                          explanation_text: 'The total is 55, and 55 ÷ 5 = 11.',
+                        },
+                    }
+                cbt:
+                  value: { data: { saved: true } }
+        '400':
+          description: Validation error, nothing sent, question not in this session, or option not on this question
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: QUESTION_NOT_IN_SESSION,
+                      message: This question is not part of this session,
+                    },
+                }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: Not a student, or no practice questions left today
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: QUOTA_EXCEEDED,
+                      message: 'Free plan: 15 practice questions a day. Come back tomorrow or upgrade to Pro',
+                    },
+                }
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              example: { error: { code: SESSION_NOT_FOUND, message: This session was not found } }
+        '409':
+          description: Practice answer already given, time is up, or the session is finished
+          content:
+            application/json:
+              examples:
+                locked:
+                  value:
+                    { error: { code: ANSWER_LOCKED, message: You already answered this question } }
+                expired:
+                  value:
+                    {
+                      error:
+                        {
+                          code: SESSION_EXPIRED,
+                          message: Time is up. Your mock has been submitted,
+                        },
+                    }
+                finished:
+                  value:
+                    { error: { code: SESSION_FINISHED, message: This session is already finished } }
+
   # ---------- Admin users ----------
 
   /admin/teachers:
@@ -726,6 +961,64 @@ components:
       properties:
         email: { type: string, format: email, example: ada@example.com }
         code: { type: string, pattern: '^\d{6}$', example: '123456' }
+
+    SessionQuestion:
+      type: object
+      description: Answers and explanations are only included for answered practice questions
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        number: { type: integer, example: 3 }
+        stem_text: { type: string, example: 'Solve for x: 3x + 5 = 20.' }
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string, example: A }
+              text: { type: string, example: x = 5 }
+        year: { type: integer, nullable: true, example: 2018 }
+        topic: { $ref: '#/components/schemas/NameAndCode' }
+        selected_option: { type: string, nullable: true, example: A }
+        is_flagged_for_review: { type: boolean }
+        is_correct: { type: boolean, description: Answered practice questions only }
+        correct_option: { type: string, description: Answered practice questions only }
+        explanation_text: { type: string, description: Answered practice questions only }
+
+    Session:
+      type: object
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        mode: { type: string, enum: [practice, cbt] }
+        status: { type: string, enum: [in_progress, submitted, auto_submitted] }
+        exam: { $ref: '#/components/schemas/ObjectId' }
+        subject: { $ref: '#/components/schemas/ObjectId' }
+        filters: { type: object }
+        started_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time, nullable: true, description: CBT only }
+        seconds_remaining:
+          {
+            type: integer,
+            nullable: true,
+            example: 1799,
+            description: Running mocks only. Restart the countdown from this,
+          }
+        total_questions: { type: integer, example: 40 }
+        answered_count: { type: integer, example: 12 }
+        submitted_at: { type: string, format: date-time, description: Finished sessions only }
+        raw_score: { type: integer, example: 24, description: Finished sessions only }
+        percentage: { type: integer, example: 60, description: Finished sessions only }
+        questions:
+          type: array
+          items: { $ref: '#/components/schemas/SessionQuestion' }
+
+    SessionResponse:
+      type: object
+      properties:
+        message: { type: string, example: Mock started }
+        data:
+          type: object
+          properties:
+            session: { $ref: '#/components/schemas/Session' }
 
     Pagination:
       type: object

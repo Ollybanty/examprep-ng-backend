@@ -39,6 +39,14 @@ const sessionSchema = new Schema(
 sessionSchema.index({ user: 1, created_at: -1 }); // a student's session history
 sessionSchema.index({ status: 1, expires_at: 1 }); // the auto-submit sweep finds expired mocks
 sessionSchema.index({ assignment: 1, user: 1 }); // assignment results
+// One running CBT mock per student. Finished mocks and practice sessions aren't limited.
+sessionSchema.index(
+  { user: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { mode: SESSION_MODES.CBT, status: SESSION_STATUS.IN_PROGRESS },
+  },
+);
 
 sessionSchema.set('toJSON', {
   transform: (doc, ret) => {

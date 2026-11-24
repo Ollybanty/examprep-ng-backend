@@ -72,16 +72,17 @@ If the frontend sees a CORS error, check Render's logs for `CORS blocked: <addre
 
 ## Scripts
 
-| Command                  | What it does                                              |
-| ------------------------ | --------------------------------------------------------- |
-| `npm run dev`            | Start with nodemon (restarts on changes)                  |
-| `npm start`              | Start without nodemon                                     |
-| `npm test`               | Run the automated tests (no database needed)              |
-| `npm run format`         | Format every file with Prettier                           |
-| `npm run format:check`   | Check formatting without changing files                   |
-| `npm run seed:taxonomy`  | Create/update exams, subjects and topics (safe to re-run) |
-| `npm run seed:admin`     | Create the first admin from `.env`                        |
-| `npm run seed:dev-users` | Create test accounts for each role and print their tokens |
+| Command                      | What it does                                                 |
+| ---------------------------- | ------------------------------------------------------------ |
+| `npm run dev`                | Start with nodemon (restarts on changes)                     |
+| `npm start`                  | Start without nodemon                                        |
+| `npm test`                   | Run the automated tests (no database needed)                 |
+| `npm run format`             | Format every file with Prettier                              |
+| `npm run format:check`       | Check formatting without changing files                      |
+| `npm run seed:taxonomy`      | Create/update exams, subjects and topics (safe to re-run)    |
+| `npm run seed:admin`         | Create the first admin from `.env`                           |
+| `npm run seed:dev-users`     | Create test accounts for each role and print their tokens    |
+| `npm run seed:dev-questions` | Add sample questions for testing sessions (development only) |
 
 ## Project structure
 
