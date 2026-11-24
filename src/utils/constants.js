@@ -78,6 +78,7 @@ export const RULES = {
   MASTERY_MIN_ATTEMPTS: 5, // under 5 answers means not rated yet
   MASTERY_WEAK_BELOW: 60, // under 60% is weak
   MASTERY_STRONG_FROM: 80, // 80% and up is strong, 60 to 79% is developing
+  RECOMMENDED_TOPICS_MAX: 3, // weak topics suggested to practise next
   FREE_PRACTICE_PER_DAY: 15,
   FREE_CBT_PER_MONTH: 1,
   PRACTICE_DEFAULT_QUESTIONS: 10, // when the student doesn't say how many

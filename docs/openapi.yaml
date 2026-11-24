@@ -26,6 +26,8 @@ tags:
     description: The logged in user's own account
   - name: Sessions
     description: Practice sessions and CBT mocks (students only)
+  - name: Analytics
+    description: How a student is doing per topic (students only)
   - name: Admin users
     description: Teacher approval, admin invites and user management (admins only)
 
@@ -739,6 +741,144 @@ paths:
             application/json:
               example: { error: { code: SESSION_NOT_FOUND, message: This session was not found } }
 
+  /sessions/{id}/review:
+    get:
+      tags: [Sessions]
+      summary: Review a finished session with answers and explanations
+      description: |
+        Every question in the order the student saw it, with their answer, the correct answer,
+        the explanation and an `outcome` (correct, wrong or skipped) for colours and filters.
+        Only available once the session is finished. For a CBT mock, this is the only place
+        answers are shown. A mock whose time ran out is submitted first.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The result and every question
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      result: { $ref: '#/components/schemas/SessionResult' }
+                      questions:
+                        type: array
+                        items: { $ref: '#/components/schemas/ReviewQuestion' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Not found, or it belongs to another student
+          content:
+            application/json:
+              example: { error: { code: SESSION_NOT_FOUND, message: This session was not found } }
+        '409':
+          description: The session is still running
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: SESSION_IN_PROGRESS,
+                      message: Submit this session first to see the answers and explanations,
+                    },
+                }
+
+  /sessions/history:
+    get:
+      tags: [Sessions]
+      summary: My sessions, newest first
+      description: |
+        Score history over time. Running sessions are included too (status `in_progress`),
+        so the app can offer to continue them. Mocks whose time ran out are submitted first.
+      parameters:
+        - name: mode
+          in: query
+          schema: { type: string, enum: [practice, cbt] }
+        - name: subject_id
+          in: query
+          schema: { $ref: '#/components/schemas/ObjectId' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/HistoryItem' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------- Analytics ----------
+
+  /analytics/mastery:
+    get:
+      tags: [Analytics]
+      summary: Topic mastery and weak topics to practise next
+      description: |
+        Every topic in the student's chosen subjects (or one subject with `subject_id`), grouped by
+        subject and sorted weak first. Topics not tried yet are `unrated` with 0 answers.
+
+        Mastery uses the last 30 answers per topic, with newer answers counting more.
+        Fewer than 5 answers is `unrated`, under 60% `weak`, 60 to 79% `developing`, 80% and up `strong`.
+
+        `recommended_topics` lists up to 3 of the weakest weak topics. Start a practice session on one
+        with `topic_id`, or on all weak topics with `weak_topics: true`.
+      parameters:
+        - name: subject_id
+          in: query
+          schema: { $ref: '#/components/schemas/ObjectId' }
+      responses:
+        '200':
+          description: Mastery per subject
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      subjects:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            subject: { $ref: '#/components/schemas/NameAndCode' }
+                            summary:
+                              type: object
+                              example: { weak: 3, developing: 1, strong: 1, unrated: 13 }
+                            topics:
+                              type: array
+                              items: { $ref: '#/components/schemas/MasteryTopic' }
+                      recommended_topics:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/MasteryTopic'
+                            - type: object
+                              properties:
+                                subject: { $ref: '#/components/schemas/NameAndCode' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Subject not found
+          content:
+            application/json:
+              example: { error: { code: SUBJECT_NOT_FOUND, message: This subject was not found } }
+
   # ---------- Admin users ----------
 
   /admin/teachers:
@@ -1060,6 +1200,51 @@ components:
         correct: { type: integer, example: 24 }
         wrong: { type: integer, example: 4 }
         skipped: { type: integer, example: 2, description: Never answered, or a cleared CBT answer }
+
+    ReviewQuestion:
+      type: object
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        number: { type: integer, example: 2 }
+        stem_text: { type: string }
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string, example: A }
+              text: { type: string }
+        year: { type: integer, nullable: true }
+        topic: { $ref: '#/components/schemas/NameAndCode' }
+        selected_option: { type: string, nullable: true, example: A }
+        correct_option: { type: string, example: C }
+        is_correct: { type: boolean }
+        outcome: { type: string, enum: [correct, wrong, skipped] }
+        is_flagged_for_review: { type: boolean }
+        explanation_text: { type: string }
+
+    HistoryItem:
+      type: object
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        mode: { type: string, enum: [practice, cbt] }
+        exam: { $ref: '#/components/schemas/NameAndCode' }
+        subject: { $ref: '#/components/schemas/NameAndCode' }
+        status: { type: string, enum: [in_progress, submitted, auto_submitted] }
+        raw_score: { type: integer, nullable: true, example: 24 }
+        total_questions: { type: integer, example: 30 }
+        percentage: { type: integer, nullable: true, example: 80 }
+        started_at: { type: string, format: date-time }
+        submitted_at: { type: string, format: date-time, nullable: true }
+
+    MasteryTopic:
+      type: object
+      properties:
+        topic: { $ref: '#/components/schemas/NameAndCode' }
+        status: { type: string, enum: [weak, developing, strong, unrated] }
+        weighted_accuracy: { type: number, nullable: true, example: 73.3 }
+        attempts_count: { type: integer, example: 5 }
+        last_calculated_at: { type: string, format: date-time, nullable: true }
 
     SessionResponse:
       type: object
