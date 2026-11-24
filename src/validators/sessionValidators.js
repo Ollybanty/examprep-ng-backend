@@ -39,3 +39,6 @@ export const saveAnswerRules = [
     .isBoolean({ strict: true })
     .withMessage('is_flagged_for_review must be true or false'),
 ];
+
+// POST /sessions/:id/submit
+export const submitSessionRules = [idParamRule];

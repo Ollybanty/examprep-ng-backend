@@ -4,6 +4,7 @@
 import { Answer, Question } from '../models/index.js';
 import { SESSION_MODES, SESSION_STATUS } from '../utils/constants.js';
 import { secondsRemaining } from './sessionTimer.js';
+import { calculateScore } from './scoringService.js';
 
 // correct_option and explanation_text are left out on purpose, so they can't leak
 const SAFE_QUESTION_FIELDS = 'stem_text options year topic';
@@ -71,11 +72,34 @@ export async function buildSessionView(session) {
     seconds_remaining: isFinished ? null : secondsRemaining(session),
     total_questions: session.total_questions,
     answered_count: answers.filter((a) => a.selected_option !== null).length,
+    // Counted from the answers, like buildResult below
     ...(isFinished && {
       submitted_at: session.submitted_at,
-      raw_score: session.raw_score,
-      percentage: session.percentage,
+      ...calculateScore(answers.filter((a) => a.is_correct).length, session.question_ids.length),
     }),
     questions: items,
+  };
+}
+
+// The result screen: score, plus how many were right, wrong or skipped
+export async function buildResult(session) {
+  // Counted from the answers, which can't change once a session is finished. Reading the
+  // session instead would show an empty score if two submits arrive at the same moment.
+  const [correct, answered] = await Promise.all([
+    Answer.countDocuments({ session: session._id, is_correct: true }),
+    // A cleared CBT answer counts as skipped
+    Answer.countDocuments({ session: session._id, selected_option: { $ne: null } }),
+  ]);
+  const score = calculateScore(correct, session.question_ids.length);
+
+  return {
+    session_id: session._id,
+    mode: session.mode,
+    status: session.status,
+    submitted_at: session.submitted_at,
+    ...score,
+    correct,
+    wrong: answered - correct,
+    skipped: score.total_questions - answered, // never answered, or cleared
   };
 }
