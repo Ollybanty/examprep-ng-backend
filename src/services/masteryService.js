@@ -1,26 +1,75 @@
-// to be handled by:
-// Weighted weak-topic mastery. See Technical Documentation B4.2.
-//
-// Example: 5 answers in a topic, oldest first: wrong, wrong, right, right, right
-//   weights:            1      2      3      4      5   (newer answers count more)
-//   weighted accuracy = (0×1 + 0×2 + 1×3 + 1×4 + 1×5) / (1+2+3+4+5) × 100 = 12/15 × 100 = 80% → strong
+// to be handled by: Oladele Ogunyemi
+import { Answer, Mastery } from '../models/index.js';
+import { MASTERY_STATUS, RULES } from '../utils/constants.js';
 
-// Pure function: takes is_correct values OLDEST FIRST (max 30) and returns the weighted accuracy (0–100).
-// Weight of the i-th answer = i (1 for the oldest).
+// Weighted mastery based on the technical doc. Newer answers count more, so a student
+// who improves sees the topic improve quickly. Example, oldest first:
+//   wrong, wrong, right, right, right with weights 1 to 5 = (3+4+5) / 15 = 80% (strong)
+
+// results: is_correct values, oldest first. Returns 0 to 100 with one decimal, or null if empty.
 export function calculateWeightedAccuracy(results) {
-  throw new Error('calculateWeightedAccuracy is not implemented yet');
+  if (results.length === 0) return null;
+
+  let earned = 0;
+  let possible = 0;
+  results.forEach((isCorrect, index) => {
+    const weight = index + 1;
+    possible += weight;
+    if (isCorrect) earned += weight;
+  });
+
+  return Math.round((earned / possible) * 1000) / 10;
 }
 
-// Pure function: returns 'unrated' | 'weak' | 'developing' | 'strong' (MASTERY_STATUS).
-//   fewer than RULES.MASTERY_MIN_ATTEMPTS (5) answers → unrated
-//   below 60 → weak;  60–79.99 → developing;  80 and above → strong
 export function classifyMastery(attemptsCount, weightedAccuracy) {
-  throw new Error('classifyMastery is not implemented yet');
+  if (attemptsCount < RULES.MASTERY_MIN_ATTEMPTS || weightedAccuracy === null) {
+    return MASTERY_STATUS.UNRATED;
+  }
+  if (weightedAccuracy < RULES.MASTERY_WEAK_BELOW) return MASTERY_STATUS.WEAK;
+  if (weightedAccuracy < RULES.MASTERY_STRONG_FROM) return MASTERY_STATUS.DEVELOPING;
+  return MASTERY_STATUS.STRONG;
 }
 
-// After a session is submitted: for every topic in the session, load the student's last 30
-// answers in that topic (Answer, newest first, then reverse to oldest first), calculate,
-// classify, and upsert the Mastery document (user + topic).
+// Always recalculates from the latest answers, so running it twice gives the same result
+export async function updateTopicMastery(userId, subjectId, topicId) {
+  const latest = await Answer.find({
+    user: userId,
+    topic: topicId,
+    selected_option: { $ne: null }, // skipped questions tell us nothing
+  })
+    .sort({ answered_at: -1 })
+    .limit(RULES.MASTERY_WINDOW)
+    .select('is_correct');
+
+  // The weights need oldest first
+  const results = latest.reverse().map((answer) => answer.is_correct);
+
+  const weightedAccuracy = calculateWeightedAccuracy(results);
+  const status = classifyMastery(results.length, weightedAccuracy);
+
+  return Mastery.findOneAndUpdate(
+    { user: userId, topic: topicId },
+    {
+      subject: subjectId,
+      attempts_count: results.length,
+      weighted_accuracy: status === MASTERY_STATUS.UNRATED ? null : weightedAccuracy,
+      status,
+      last_calculated_at: new Date(),
+    },
+    { upsert: true, returnDocument: 'after' },
+  );
+}
+
 export async function updateMasteryForSession(session) {
-  throw new Error('updateMasteryForSession is not implemented yet');
+  const topicIds = await Answer.distinct('topic', {
+    session: session._id,
+    topic: { $ne: null }, // imported questions may not have a topic yet
+    selected_option: { $ne: null },
+  });
+
+  await Promise.all(
+    topicIds.map((topicId) => updateTopicMastery(session.user, session.subject, topicId)),
+  );
+
+  return topicIds.length;
 }

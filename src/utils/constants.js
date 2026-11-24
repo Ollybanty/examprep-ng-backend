@@ -80,6 +80,8 @@ export const RULES = {
   MASTERY_STRONG_FROM: 80, // 80% and up is strong, 60 to 79% is developing
   FREE_PRACTICE_PER_DAY: 15,
   FREE_CBT_PER_MONTH: 1,
+  PRACTICE_DEFAULT_QUESTIONS: 10, // when the student doesn't say how many
+  PRACTICE_MAX_QUESTIONS: 40,
   QUOTA_TIMEZONE: 'Africa/Lagos', // quotas reset at midnight Lagos time (DEC 05)
   JOIN_CODE_LENGTH: 6,
   ADMIN_INVITE_EXPIRY_HOURS: 48,
