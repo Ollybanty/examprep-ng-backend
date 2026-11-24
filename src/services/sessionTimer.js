@@ -1,5 +1,5 @@
 // to be handled by: Oladele Ogunyemi
-import { SESSION_MODES, SESSION_STATUS } from '../utils/constants.js';
+import { RULES, SESSION_MODES, SESSION_STATUS } from '../utils/constants.js';
 import { finishSession } from './sessionService.js';
 
 // CBT timer (DEC 02, Technical Documentation B4.1): the server saves expires_at when a mock
@@ -18,8 +18,12 @@ export function secondsRemaining(session, now = new Date()) {
   return Math.max(Math.floor((session.expires_at.getTime() - now.getTime()) / 1000), 0);
 }
 
+// Waits out the grace period too, so an answer sent in the last second is never lost
 export async function autoSubmitIfExpired(session) {
-  if (session.status === SESSION_STATUS.IN_PROGRESS && isExpired(session)) {
+  if (
+    session.status === SESSION_STATUS.IN_PROGRESS &&
+    isExpired(session, RULES.CBT_GRACE_SECONDS)
+  ) {
     return finishSession(session, SESSION_STATUS.AUTO_SUBMITTED);
   }
   return session;
