@@ -1,4 +1,4 @@
-// to be handled by:
+// to be handled by: Taiwo Ganiyu
 import { notImplemented } from '../../utils/notImplemented.js';
 
 // GET /api/v1/questions

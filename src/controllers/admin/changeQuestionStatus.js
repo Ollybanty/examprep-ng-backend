@@ -1,4 +1,4 @@
-// to be handled by:
+// to be handled by: Taiwo Ganiyu
 import { notImplemented } from '../../utils/notImplemented.js';
 
 // PATCH /api/v1/admin/questions/:id/status
