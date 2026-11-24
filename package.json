@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "test": "node --test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "seed:admin": "node scripts/seedAdmin.js",

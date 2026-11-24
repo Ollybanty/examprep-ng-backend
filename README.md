@@ -76,6 +76,7 @@ If the frontend sees a CORS error, check Render's logs for `CORS blocked: <addre
 | ------------------------ | --------------------------------------------------------- |
 | `npm run dev`            | Start with nodemon (restarts on changes)                  |
 | `npm start`              | Start without nodemon                                     |
+| `npm test`               | Run the automated tests (no database needed)              |
 | `npm run format`         | Format every file with Prettier                           |
 | `npm run format:check`   | Check formatting without changing files                   |
 | `npm run seed:taxonomy`  | Create/update exams, subjects and topics (safe to re-run) |
