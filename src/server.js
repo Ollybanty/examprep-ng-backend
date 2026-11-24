@@ -12,6 +12,9 @@ async function start() {
 
   app.listen(env.port, () => {
     console.log(`Server running on http://localhost:${env.port} (${env.nodeEnv})`);
+    if (env.docsUsername && env.docsPassword) {
+      console.log(`API docs: http://localhost:${env.port}/api/docs`);
+    }
   });
 }
 
