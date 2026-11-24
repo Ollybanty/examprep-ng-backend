@@ -1,16 +1,8 @@
-// to be handled by:
-import { notImplemented } from '../../utils/notImplemented.js';
+// to be handled by: Oladele Ogunyemi
+import { populateProfile } from '../../utils/populateProfile.js';
 
-// GET /api/v1/users/me
-// Access: Logged in
-//
-// Task: Return the logged-in user's profile.
-//
-// Rules:
-//   - req.user is already loaded by requireAuth.
-//   - Populate target_exam and selected_subjects (name and code only, to keep the response small).
-//
-// Spec: Tech Doc B2.1 (User)
+// GET /api/v1/users/me  (Logged in)
 export async function getMe(req, res) {
-  return notImplemented(res);
+  await populateProfile(req.user);
+  res.json({ data: { user: req.user } });
 }

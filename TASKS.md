@@ -125,16 +125,16 @@ Every file you need to fill in already exists. It has a `// to be handled by:` l
 
 ---
 
-## Suggested owners
+## Owners
 
-| Block                   | Suggested owner              | Why                                                                             |
-| ----------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
-| 1. Accounts and auth    | Backend lead                 | Everyone else depends on it, so it should be built first and reviewed carefully |
-| 2. Question bank        | Teammate 2                   | Can start immediately, in parallel with Block 1                                 |
-| 3. Sessions and mastery | Backend lead (after Block 1) | The core logic the team will be asked to explain (timer, scoring, mastery)      |
-| 4. Classes              | Teammate 3 (joining later)   | Self-contained; can start whenever they join                                    |
+| Block                   | Owner                   | Why                                                                        |
+| ----------------------- | ----------------------- | -------------------------------------------------------------------------- |
+| 1. Accounts and auth    | Oladele Ogunyemi (done) | Everyone else depends on it, so it was built first and reviewed carefully  |
+| 2. Question bank        | Taiwo Ganiyu            | Content the other blocks need, so it can start straight away               |
+| 3. Sessions and mastery | Oladele Ogunyemi        | The core logic the team will be asked to explain (timer, scoring, mastery) |
+| 4. Classes              | Olumide                 | Self-contained, so it can be built alongside Blocks 2 and 3                |
 
-**Until Block 1 is done**, test protected routes with the test accounts: run `npm run seed:dev-users` and copy a token into Postman as `Authorization: Bearer <token>`.
+**Block 1 is done**, so you can register and log in for real. For quick testing, `npm run seed:dev-users` creates test accounts and prints a token for each. Paste one into Postman as `Authorization: Bearer <token>`.
 
 ---
 
@@ -148,5 +148,6 @@ Every file you need to fill in already exists. It has a `// to be handled by:` l
 6. **Questions are saved with `.save()`**, never `findByIdAndUpdate`, or the "no publish without explanation" rule is skipped.
 7. **Never send `correct_option` or `explanation_text` to a student** before the right moment (practice: after answering; CBT: after submitting).
 8. **Owners only:** a student can only read their own sessions; a teacher only their own classes. Return 404 (not 403) for someone else's record.
-9. **Format before you push:** `npm run format`.
-10. **Never commit `.env`.**
+9. **Document every endpoint you build** in `docs/openapi.yaml`, in the same PR. Copy the shape of a Block 1 endpoint. Check it at `/api/docs`.
+10. **Format before you push:** `npm run format`.
+11. **Never commit `.env`.**

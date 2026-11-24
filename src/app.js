@@ -6,8 +6,12 @@ import { logger } from './middleware/logger.js';
 import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import routes from './routes/index.js';
+import docsRoutes from './routes/docsRoutes.js';
 
 const app = express();
+
+// Behind Render's proxy, this makes req.ip the user's real IP, so rate limits work per user
+app.set('trust proxy', env.trustProxy);
 
 // First, so even requests that fail later (e.g. bad JSON) are logged
 app.use(logger);
@@ -19,6 +23,8 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || env.corsOrigins.includes(origin)) return callback(null, true);
+      // Shows up in the logs, so a frontend CORS error is easy to trace
+      console.warn(`CORS blocked: ${origin} (add it to CORS_ORIGINS to allow it)`);
       return callback(null, false);
     },
   }),
@@ -28,6 +34,9 @@ app.use(
 app.use(express.json({ limit: '100kb' }));
 
 app.use('/api/v1', routes);
+
+// Swagger docs, behind a username and password. Off unless DOCS_USERNAME and DOCS_PASSWORD are set.
+if (env.docsUsername && env.docsPassword) app.use('/api/docs', docsRoutes);
 
 // These two must stay last
 app.use(notFound);
