@@ -1,18 +1,16 @@
-// to be handled by:
-import { notImplemented } from '../../utils/notImplemented.js';
+// to be handled by: Oladele Ogunyemi
+import { Session } from '../../models/index.js';
+import { AppError } from '../../utils/AppError.js';
+import { autoSubmitIfExpired } from '../../services/sessionTimer.js';
+import { buildSessionView } from '../../services/sessionView.js';
 
-// GET /api/v1/sessions/:id
-// Access: Student (owner)
-//
-// Task: Get a session so the student can continue it (e.g. after a page refresh).
-//
-// Rules:
-//   - Only the session owner (404 otherwise, so ids can't be probed).
-//   - If it is a CBT session past expires_at and still in_progress, auto-submit it FIRST (sessionTimer.autoSubmitIfExpired).
-//   - Return the questions (no answers), the student's saved selections and flags, and seconds_remaining for CBT.
-//   - This is the QA check: "Refresh during mock preserves state".
-//
-// Spec: Tech Doc B4.1, B5 (CBT Timer)
+// GET /api/v1/sessions/:id  (Students, own sessions only)
 export async function getSession(req, res) {
-  return notImplemented(res);
+  const session = await Session.findOne({ _id: req.params.id, user: req.user._id });
+  if (!session) throw new AppError(404, 'SESSION_NOT_FOUND', 'This session was not found');
+
+  // A mock whose time ran out is submitted before we reply
+  const current = await autoSubmitIfExpired(session);
+
+  res.json({ data: { session: await buildSessionView(current) } });
 }

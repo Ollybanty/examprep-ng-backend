@@ -6,11 +6,13 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "test": "node --test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "seed:admin": "node scripts/seedAdmin.js",
     "seed:taxonomy": "node scripts/seedTaxonomy.js",
-    "seed:dev-users": "node scripts/seedDevUsers.js"
+    "seed:dev-users": "node scripts/seedDevUsers.js",
+    "seed:dev-questions": "node scripts/seedDevQuestions.js"
   },
   "keywords": [],
   "author": "",
