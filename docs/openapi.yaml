@@ -703,6 +703,42 @@ paths:
                   value:
                     { error: { code: SESSION_FINISHED, message: This session is already finished } }
 
+  /sessions/{id}/submit:
+    post:
+      tags: [Sessions]
+      summary: Submit a session and get the score
+      description: |
+        Scores the session (+1 right, 0 wrong or skipped) and updates the student's topic mastery.
+
+        Submitting a mock after its time ran out records it as `auto_submitted`.
+        Submitting a session that's already finished (a double tap, or the timer got there first)
+        returns the same result with a 200, not an error.
+
+        Mocks nobody comes back to are also auto submitted by the server every minute.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: Submitted }
+                  data:
+                    type: object
+                    properties:
+                      result: { $ref: '#/components/schemas/SessionResult' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Not found, or it belongs to another student
+          content:
+            application/json:
+              example: { error: { code: SESSION_NOT_FOUND, message: This session was not found } }
+
   # ---------- Admin users ----------
 
   /admin/teachers:
@@ -1010,6 +1046,20 @@ components:
         questions:
           type: array
           items: { $ref: '#/components/schemas/SessionQuestion' }
+
+    SessionResult:
+      type: object
+      properties:
+        session_id: { $ref: '#/components/schemas/ObjectId' }
+        mode: { type: string, enum: [practice, cbt] }
+        status: { type: string, enum: [submitted, auto_submitted] }
+        submitted_at: { type: string, format: date-time }
+        raw_score: { type: integer, example: 24 }
+        total_questions: { type: integer, example: 30 }
+        percentage: { type: integer, example: 80 }
+        correct: { type: integer, example: 24 }
+        wrong: { type: integer, example: 4 }
+        skipped: { type: integer, example: 2, description: Never answered, or a cleared CBT answer }
 
     SessionResponse:
       type: object

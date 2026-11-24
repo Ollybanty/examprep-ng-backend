@@ -6,6 +6,7 @@ import {
   startSessionRules,
   getSessionRules,
   saveAnswerRules,
+  submitSessionRules,
 } from '../validators/sessionValidators.js';
 import { startSession } from '../controllers/sessions/startSession.js';
 import { getSessionHistory } from '../controllers/sessions/getSessionHistory.js';
@@ -42,7 +43,14 @@ router.patch(
   validate,
   saveAnswer,
 );
-router.post('/sessions/:id/submit', requireAuth, requireRole(ROLES.STUDENT), submitSession);
+router.post(
+  '/sessions/:id/submit',
+  requireAuth,
+  requireRole(ROLES.STUDENT),
+  submitSessionRules,
+  validate,
+  submitSession,
+);
 router.get('/sessions/:id/review', requireAuth, requireRole(ROLES.STUDENT), getSessionReview);
 
 export default router;

@@ -2,6 +2,7 @@ import { env } from './config/env.js';
 import { connectDB } from './config/db.js';
 import app from './app.js';
 import { isEmailConfigured } from './services/emailService.js';
+import { startAutoSubmitJob } from './jobs/autoSubmitJob.js';
 
 async function start() {
   try {
@@ -10,6 +11,9 @@ async function start() {
     console.error('Could not connect to MongoDB:', err.message);
     process.exit(1);
   }
+
+  // Auto submits expired CBT mocks every minute
+  startAutoSubmitJob();
 
   if (env.isProduction && !isEmailConfigured) {
     console.warn(
