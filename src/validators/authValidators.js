@@ -19,7 +19,7 @@ const codeRule = body('code')
   .withMessage(`Code must be ${RULES.OTP_LENGTH} digits`);
 
 // Password strength rules shared by register and reset password
-const passwordRule = (field, label = 'Password') =>
+export const passwordRule = (field, label = 'Password') =>
   body(field)
     .isString()
     .withMessage(`${label} is required`)
@@ -66,6 +66,22 @@ export const resetPasswordRules = [
 ];
 
 // No strength rules at login, so older accounts still work if the rules ever change
+// The invite token is 64 hex characters (32 random bytes)
+export const acceptAdminInviteRules = [
+  body('token')
+    .isString()
+    .bail()
+    .matches(/^[a-f0-9]{64}$/)
+    .withMessage('This invite link is not valid'),
+  body('full_name')
+    .trim()
+    .notEmpty()
+    .withMessage('Full name is required')
+    .isLength({ max: 100 })
+    .withMessage('Full name must be at most 100 characters'),
+  passwordRule('password'),
+];
+
 export const loginRules = [
   emailRule,
   body('password')

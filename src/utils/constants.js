@@ -83,6 +83,8 @@ export const RULES = {
   QUOTA_TIMEZONE: 'Africa/Lagos', // quotas reset at midnight Lagos time (DEC 05)
   JOIN_CODE_LENGTH: 6,
   ADMIN_INVITE_EXPIRY_HOURS: 48,
+  PAGE_LIMIT_DEFAULT: 20, // items per page when the app doesn't say
+  PAGE_LIMIT_MAX: 100,
 };
 
 // Adds created_at and updated_at to every collection, in snake_case like the docs

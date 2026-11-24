@@ -7,6 +7,7 @@ import {
   loginLimiter,
   forgotPasswordLimiter,
   resetPasswordLimiter,
+  acceptInviteLimiter,
 } from '../middleware/rateLimit.js';
 import {
   registerRules,
@@ -15,6 +16,7 @@ import {
   loginRules,
   forgotPasswordRules,
   resetPasswordRules,
+  acceptAdminInviteRules,
 } from '../validators/authValidators.js';
 import { register } from '../controllers/auth/register.js';
 import { verifyOtp } from '../controllers/auth/verifyOtp.js';
@@ -45,6 +47,12 @@ router.post(
   validate,
   resetPassword,
 );
-router.post('/auth/accept-admin-invite', acceptAdminInvite);
+router.post(
+  '/auth/accept-admin-invite',
+  acceptInviteLimiter,
+  acceptAdminInviteRules,
+  validate,
+  acceptAdminInvite,
+);
 
 export default router;
