@@ -1327,3 +1327,70 @@ components:
 
 security:
   - bearerAuth: []
+
+# ---------- End points ----------
+      tags:
+          name: Exams
+          description: Examination endpoints
+          paths:
+                /api/v1/exams:
+                get:
+                  summary: (Get all available examinations)
+                  description:
+                  Retrieves all active examinations from the database, including,
+          thier names, codes, CBT duration and question count.
+          
+          tags: exams
+          operationId: listExams
+          response:
+          '200':
+          description: Examinations retrieved successfully
+          content:
+          application/json:
+            schema:
+            type: object
+            properties:
+            success:
+            type: boolean
+            example: true
+            count:
+            type: integer
+            example: 2
+            data:
+            type: array
+            items: {$ref: '#/components/schemas/Exam'}
+            
+            '500':
+              description: internal server error
+              content:
+                  application/json:
+                    schema:
+                      $ref: {'#/components/schemas/ErrorResponse'}
+name:
+  type: string
+  example: "JAMB(UTME)"
+  cbt_duration_minutes:
+  type: integer
+  example: 30
+  
+  cbt_question_count:
+  type: integer
+  example: 40
+  
+  is_active:
+  type: boolean
+  example: true
+ErrorResponse:
+type: object
+properties:
+success:
+type: boolean
+example: false
+
+message:
+type: string
+example: "Internal server error"
+
+
+
+
