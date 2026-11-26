@@ -141,13 +141,14 @@ Every file you need to fill in already exists. It has a `// to be handled by:` l
 ## Team rules
 
 1. **One feature per branch**, from the latest `dev`: e.g. `feat/auth-register`, `feat/question-crud`. Open a PR into `dev`.
-2. **Fill in the owner line** at the top of the file: `// to be handled by: <your name>`.
-3. **Delete `return notImplemented(res);`** when you build an endpoint.
-4. **Responses:** success is `{ data }` (plus `message` when useful, and `pagination` for lists). Errors: `throw new AppError(status, 'CODE', 'Message')`; the error handler formats it. No try/catch needed (Express 5).
-5. **Use the constants:** `ROLES.STUDENT`, `RULES.OTP_MAX_ATTEMPTS`, etc., never typed strings or numbers.
-6. **Questions are saved with `.save()`**, never `findByIdAndUpdate`, or the "no publish without explanation" rule is skipped.
-7. **Never send `correct_option` or `explanation_text` to a student** before the right moment (practice: after answering; CBT: after submitting).
-8. **Owners only:** a student can only read their own sessions; a teacher only their own classes. Return 404 (not 403) for someone else's record.
-9. **Document every endpoint you build** in `docs/openapi.yaml`, in the same PR. Copy the shape of a Block 1 endpoint. Check it at `/api/docs`.
-10. **Format before you push:** `npm run format`.
-11. **Never commit `.env`.**
+2. **Only Oladele merges.** When your PR is ready, ask Oladele to review it. Never merge your own PR or anyone else's, and never push straight to `dev` or `main`.
+3. **Fill in the owner line** at the top of the file: `// to be handled by: <your name>`.
+4. **Delete `return notImplemented(res);`** when you build an endpoint.
+5. **Responses:** success is `{ data }` (plus `message` when useful, and `pagination` for lists). Errors: `throw new AppError(status, 'CODE', 'Message')`; the error handler formats it. No try/catch needed (Express 5).
+6. **Use the constants:** `ROLES.STUDENT`, `RULES.OTP_MAX_ATTEMPTS`, etc., never typed strings or numbers.
+7. **Questions are saved with `.save()`**, never `findByIdAndUpdate`, or the "no publish without explanation" rule is skipped.
+8. **Never send `correct_option` or `explanation_text` to a student** before the right moment (practice: after answering; CBT: after submitting).
+9. **Owners only:** a student can only read their own sessions; a teacher only their own classes. Return 404 (not 403) for someone else's record.
+10. **Document every endpoint you build** in `docs/openapi.yaml`, in the same PR. Copy the shape of a Block 1 endpoint. Check it at `/api/docs`.
+11. **Format before you push:** `npm run format`.
+12. **Never commit `.env`.**
