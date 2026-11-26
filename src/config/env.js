@@ -1,7 +1,4 @@
 import 'dotenv/config';
-import mongoose from 'mongoose';
-
-
 
 // Stop early with a clear message if a required variable is missing
 const required = ['MONGODB_URI', 'JWT_SECRET'];
