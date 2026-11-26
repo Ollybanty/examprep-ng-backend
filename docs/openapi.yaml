@@ -1291,5 +1291,39 @@ components:
               data:
                 type: array
                 items: { $ref: '#/components/schemas/User' }
-              pagination: { $ref: '#/components/schemas/P' }
-              []     
+              pagination: { $ref: '#/components/schemas/Pagination' }
+    ValidationError:
+      description: The request body or query failed validation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Email is not valid
+              details: [{ field: email, message: Email is not valid }]
+    Unauthenticated:
+      description: Missing, invalid or expired token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: UNAUTHENTICATED, message: Please log in to continue } }
+    Forbidden:
+      description: Logged in, but not allowed (wrong role or email not verified)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: FORBIDDEN, message: You do not have permission to do this } }
+    TooManyRequests:
+      description: Rate limit reached
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            {
+              error:
+                { code: TOO_MANY_REQUESTS, message: Too many attempts. Try again in 15 minutes },
+            }
+
+security:
+  - bearerAuth: []
