@@ -11,7 +11,7 @@ import { Exam } from '../../models/Exam.js';
 //
 // Spec: PRD (Target Exams)
 
-export async function listSubjects(req, res) {
+export async function listExams(req, res) {
   const exams = await Exam.find({
     is_active: true,
   })
