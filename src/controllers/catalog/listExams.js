@@ -1,5 +1,6 @@
 // to be handled by: Taiwo Ganiyu
 import { notImplemented } from '../../utils/notImplemented.js';
+
 // GET /api/v1/exams
 // Access: Logged in
 //
