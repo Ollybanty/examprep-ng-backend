@@ -14,7 +14,7 @@ import { Exam, Subject, Topic, Question } from '../../models/index.js';
 //   - The model already checks correct_option matches an option.
 //
 // Spec: Tech Doc B3 (Admin CMS)
-export const createQuestion =  async (req, res) => {
+export async function createQuestion(req, res){
     const{
     exam_id, subject_id, topic_id, year, stem_text, 
     options, correct_option, explanation_text, status, source
