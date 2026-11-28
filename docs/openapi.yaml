@@ -1325,6 +1325,81 @@ paths:
 
   # ---------- Admin users ----------
 
+  /admin/analytics:
+    get:
+      tags: [Admin users]
+      summary: Usage numbers for the admin dashboard
+      description: |
+        "In period" means the last `days` days (default 7), counted back from now.
+
+        - **North Star:** practice sessions completed per active student. `null` when nobody was active.
+        - **Active student:** answered at least one question in the period.
+        - User counts leave out deactivated accounts.
+        - Question and report counts are totals, not just the period.
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 90, default: 7 }
+      responses:
+        '200':
+          description: The numbers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      period:
+                        type: object
+                        properties:
+                          days: { type: integer, example: 7 }
+                          from: { type: string, format: date-time }
+                          to: { type: string, format: date-time }
+                      north_star:
+                        type: object
+                        properties:
+                          practice_sessions_per_active_student:
+                            { type: number, nullable: true, example: 2.4 }
+                      users:
+                        type: object
+                        properties:
+                          by_role:
+                            type: object
+                            properties:
+                              student: { type: integer, example: 120 }
+                              teacher: { type: integer, example: 6 }
+                              admin: { type: integer, example: 2 }
+                          pending_teachers: { type: integer, example: 1 }
+                          new_in_period: { type: integer, example: 14 }
+                      activity:
+                        type: object
+                        properties:
+                          active_students: { type: integer, example: 45 }
+                          practice_sessions_completed: { type: integer, example: 108 }
+                          cbt_mocks_completed: { type: integer, example: 12 }
+                          questions_answered: { type: integer, example: 1630 }
+                      content:
+                        type: object
+                        properties:
+                          questions_by_status:
+                            type: object
+                            properties:
+                              draft: { type: integer, example: 40 }
+                              reviewed: { type: integer, example: 10 }
+                              published: { type: integer, example: 900 }
+                              flagged: { type: integer, example: 3 }
+                          open_reports: { type: integer, example: 3 }
+                      classes:
+                        type: object
+                        properties:
+                          active_classes: { type: integer, example: 8 }
+                          assignments_created_in_period: { type: integer, example: 5 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /admin/teachers:
     get:
       tags: [Admin users]
