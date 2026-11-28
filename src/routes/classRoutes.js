@@ -9,6 +9,8 @@ import {
   listClassStudentsRules,
   createAssignmentRules,
   listAssignmentsRules,
+  classResultsRules,
+  exportClassResultsRules,
 } from '../validators/classValidators.js';
 import { createClass } from '../controllers/classes/createClass.js';
 import { listMyClasses } from '../controllers/classes/listMyClasses.js';
@@ -64,7 +66,21 @@ router.get(
   validate,
   listAssignments,
 );
-router.get('/classes/:id/results', requireAuth, requireApprovedTeacher, getClassResults);
-router.get('/classes/:id/results/export', requireAuth, requireApprovedTeacher, exportClassResults);
+router.get(
+  '/classes/:id/results',
+  requireAuth,
+  requireApprovedTeacher,
+  classResultsRules,
+  validate,
+  getClassResults,
+);
+router.get(
+  '/classes/:id/results/export',
+  requireAuth,
+  requireApprovedTeacher,
+  exportClassResultsRules,
+  validate,
+  exportClassResults,
+);
 
 export default router;

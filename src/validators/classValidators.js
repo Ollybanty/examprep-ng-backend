@@ -59,3 +59,7 @@ export const createAssignmentRules = [
 ];
 
 export const listAssignmentsRules = [idParamRule, ...paginationRules];
+
+export const classResultsRules = [idParamRule, ...paginationRules];
+
+export const exportClassResultsRules = [idParamRule];

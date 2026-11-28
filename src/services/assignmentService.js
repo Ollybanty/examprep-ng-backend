@@ -72,7 +72,15 @@ export async function startAssignmentSession(user, assignmentId) {
   }
 }
 
-// Each assignment's status for one student, with one query. Also used by class results.
+// The one place that decides a status, so lists, results and the CSV never disagree
+export function progressStatus(session, assignment, now = new Date()) {
+  if (session && FINISHED.includes(session.status)) return ASSIGNMENT_STATUS.COMPLETED;
+  if (session) return ASSIGNMENT_STATUS.IN_PROGRESS;
+  if (assignment.deadline <= now) return ASSIGNMENT_STATUS.MISSED;
+  return ASSIGNMENT_STATUS.NOT_STARTED;
+}
+
+// Each assignment's status for one student, with one query
 export async function getStudentAssignmentStatuses(studentId, assignments) {
   const sessions = await Session.find({
     user: studentId,
@@ -86,11 +94,7 @@ export async function getStudentAssignmentStatuses(studentId, assignments) {
   return new Map(
     assignments.map((a) => {
       const session = sessionByAssignment.get(String(a._id));
-      let status;
-      if (session && FINISHED.includes(session.status)) status = ASSIGNMENT_STATUS.COMPLETED;
-      else if (session) status = ASSIGNMENT_STATUS.IN_PROGRESS;
-      else if (a.deadline <= now) status = ASSIGNMENT_STATUS.MISSED;
-      else status = ASSIGNMENT_STATUS.NOT_STARTED;
+      const status = progressStatus(session, a, now);
 
       return [
         String(a._id),
