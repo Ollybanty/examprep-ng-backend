@@ -63,3 +63,31 @@ The link expires in ${RULES.ADMIN_INVITE_EXPIRY_HOURS} hours and can only be use
 ExamPrep NG`,
   };
 }
+
+// e.g. "Friday, 5 December 2026 at 18:00", in Lagos time
+const formatDeadline = (date) =>
+  new Intl.DateTimeFormat('en-GB', {
+    timeZone: RULES.QUOTA_TIMEZONE,
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }).format(date);
+
+export function newAssignmentEmail(
+  studentName,
+  { teacherName, className, title, questionCount, deadline },
+) {
+  return {
+    subject: `New assignment in ${className}: ${title}`,
+    text: `Hi ${studentName},
+
+${teacherName} has set a new assignment in ${className}.
+
+${title}
+${questionCount} questions
+Due: ${formatDeadline(deadline)} (Lagos time)
+
+Open ExamPrep NG and go to your class to start it. You get one attempt.
+
+ExamPrep NG`,
+  };
+}

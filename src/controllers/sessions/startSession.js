@@ -2,33 +2,15 @@
 import mongoose from 'mongoose';
 import { Exam, Subject, Topic, Question, Mastery, Session } from '../../models/index.js';
 import { AppError } from '../../utils/AppError.js';
-import {
-  MASTERY_STATUS,
-  QUESTION_STATUS,
-  RULES,
-  SESSION_MODES,
-  SESSION_STATUS,
-} from '../../utils/constants.js';
+import { MASTERY_STATUS, QUESTION_STATUS, RULES, SESSION_MODES } from '../../utils/constants.js';
 import {
   getPracticeRemaining,
   checkPracticeQuota,
   useCbtQuota,
 } from '../../services/quotaService.js';
-import { autoSubmitIfExpired } from '../../services/sessionTimer.js';
+import { findRunningMock } from '../../services/sessionTimer.js';
 import { buildSessionView } from '../../services/sessionView.js';
-
-// Returns the student's running CBT mock, or null. A mock whose time ran out is submitted first.
-async function findRunningMock(userId) {
-  const running = await Session.findOne({
-    user: userId,
-    mode: SESSION_MODES.CBT,
-    status: SESSION_STATUS.IN_PROGRESS,
-  });
-  if (!running) return null;
-
-  const current = await autoSubmitIfExpired(running);
-  return current.status === SESSION_STATUS.IN_PROGRESS ? current : null;
-}
+import { startAssignmentSession } from '../../services/assignmentService.js';
 
 const sendRunningMock = async (res, session) =>
   res.json({
@@ -43,13 +25,13 @@ export async function startSession(req, res) {
   const user = req.user;
   const isCbt = mode === SESSION_MODES.CBT;
 
-  // Class assignments come with Block 4
+  // An assignment sets its own mode, exam, subject and questions
   if (assignment_id) {
-    throw new AppError(
-      501,
-      'NOT_IMPLEMENTED',
-      'Starting a session from a class assignment is not built yet',
-    );
+    const { session, resumed } = await startAssignmentSession(user, assignment_id);
+    return res.status(resumed ? 200 : 201).json({
+      message: resumed ? 'You already started this assignment' : 'Assignment started',
+      data: { session: await buildSessionView(session) },
+    });
   }
 
   const exam = await Exam.findOne({ _id: exam_id, is_active: true });

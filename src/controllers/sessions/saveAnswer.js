@@ -77,12 +77,15 @@ export async function saveAnswer(req, res) {
       throw err;
     }
 
-    // If no practice questions are left today, take the answer back
-    try {
-      await usePracticeQuestion(req.user);
-    } catch (err) {
-      await answer.deleteOne();
-      throw err;
+    // If no practice questions are left today, take the answer back.
+    // Class assignments don't use the quota.
+    if (!session.assignment) {
+      try {
+        await usePracticeQuestion(req.user);
+      } catch (err) {
+        await answer.deleteOne();
+        throw err;
+      }
     }
 
     return res.json({

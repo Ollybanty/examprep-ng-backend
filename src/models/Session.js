@@ -38,7 +38,15 @@ const sessionSchema = new Schema(
 
 sessionSchema.index({ user: 1, created_at: -1 }); // a student's session history
 sessionSchema.index({ status: 1, expires_at: 1 }); // the auto-submit sweep finds expired mocks
-sessionSchema.index({ assignment: 1, user: 1 }); // assignment results
+// One attempt per assignment per student. Partial, so sessions with no assignment don't clash.
+sessionSchema.index(
+  { assignment: 1, user: 1 },
+  {
+    name: 'one_attempt_per_assignment',
+    unique: true,
+    partialFilterExpression: { assignment: { $type: 'objectId' } },
+  },
+);
 // One running CBT mock per student. Finished mocks and practice sessions aren't limited.
 sessionSchema.index(
   { user: 1 },

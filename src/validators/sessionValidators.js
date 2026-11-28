@@ -2,11 +2,17 @@ import { body, query } from 'express-validator';
 import { OPTION_LABELS, RULES, SESSION_MODES } from '../utils/constants.js';
 import { idParamRule, paginationRules } from './commonValidators.js';
 
+// An assignment already sets these three, so they're only checked without one
+const withoutAssignment = body('assignment_id').not().exists();
+
 // POST /sessions
 export const startSessionRules = [
-  body('mode').isIn(Object.values(SESSION_MODES)).withMessage('mode must be "practice" or "cbt"'),
-  body('exam_id').isMongoId().withMessage('Choose a valid exam'),
-  body('subject_id').isMongoId().withMessage('Choose a valid subject'),
+  body('mode')
+    .if(withoutAssignment)
+    .isIn(Object.values(SESSION_MODES))
+    .withMessage('mode must be "practice" or "cbt"'),
+  body('exam_id').if(withoutAssignment).isMongoId().withMessage('Choose a valid exam'),
+  body('subject_id').if(withoutAssignment).isMongoId().withMessage('Choose a valid subject'),
   // Practice only. A CBT mock always uses the exam's own settings.
   body('question_count')
     .optional()
