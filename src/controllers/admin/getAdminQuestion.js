@@ -10,6 +10,6 @@ import { notImplemented } from '../../utils/notImplemented.js';
 //   - Include QuestionVersion records for this question, newest first.
 //
 // Spec: Brief: question versions
-export async function getAdminQuestion(req, res) {
-  return notImplemented(res);
-}
+ export async function getAdminQuestion(req, res) {
+   return notImplemented(res);
+ }
