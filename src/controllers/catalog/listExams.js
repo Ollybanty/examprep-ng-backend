@@ -1,15 +1,12 @@
 // to be handled by: Taiwo Ganiyu
-import { notImplemented } from '../../utils/notImplemented.js';
+import { Exam } from '../../models/index.js';
 
 // GET /api/v1/exams
 // Access: Logged in
-//
-// Task: List the active exams (JAMB, WAEC).
-//
-// Rules:
-//   - Only is_active exams. Return name, code, cbt_duration_minutes, cbt_question_count.
-//
-// Spec: PRD (Target Exams)
+// Only active exams, with what the app needs to show each one
 export async function listExams(req, res) {
-  return notImplemented(res);
+  const exams = await Exam.find({ is_active: true })
+    .select('name code cbt_duration_minutes cbt_question_count')
+    .sort({ name: 1 });
+  res.json({ data: exams });
 }

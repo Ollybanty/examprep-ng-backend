@@ -24,6 +24,8 @@ tags:
     description: Sign up, email verification, login and password reset
   - name: Profile
     description: The logged in user's own account
+  - name: Catalog
+    description: Exams, subjects and topics
   - name: Sessions
     description: Practice sessions and CBT mocks (students only)
   - name: Analytics
@@ -471,6 +473,26 @@ paths:
                 { error: { code: NO_SETTINGS, message: Send at least one setting to update } }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------- Catalog ----------
+
+  /exams:
+    get:
+      tags: [Catalog]
+      summary: List the active exams
+      description: Each exam's CBT length and question count. Students pick from these at onboarding.
+      responses:
+        '200':
+          description: Active exams, sorted by name
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Exam' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
 
   # ---------- Sessions ----------
 
@@ -1074,6 +1096,15 @@ components:
         _id: { $ref: '#/components/schemas/ObjectId' }
         name: { type: string, example: Mathematics }
         code: { type: string, example: mathematics }
+
+    Exam:
+      type: object
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        name: { type: string, example: JAMB (UTME) }
+        code: { type: string, example: JAMB }
+        cbt_duration_minutes: { type: integer, example: 30 }
+        cbt_question_count: { type: integer, example: 40 }
 
     User:
       type: object
