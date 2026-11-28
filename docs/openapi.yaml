@@ -1205,6 +1205,124 @@ paths:
             application/json:
               example: { error: { code: CLASS_NOT_FOUND, message: This class was not found } }
 
+  /classes/{id}/results:
+    get:
+      tags: [Classes]
+      summary: Class results (the class's own teacher)
+      description: |
+        Every assignment (latest deadline first, paginated) with each student's status and score,
+        plus the class's weakest topics.
+
+        - A student who joined after an assignment's deadline isn't listed for it.
+        - `average_percentage` is the average of students who finished, or `null` if nobody has.
+        - `weak_topics`: up to 5 topics the most students are weak in, from the same mastery data
+          students see. `rated_count` is how many students have enough answers in that topic to be rated.
+          Only the class's subject counts, if it has one.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: The results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      class:
+                        type: object
+                        properties:
+                          _id: { $ref: '#/components/schemas/ObjectId' }
+                          name: { type: string, example: SS3 Maths }
+                          subject:
+                            nullable: true
+                            allOf: [{ $ref: '#/components/schemas/NameAndCode' }]
+                      student_count: { type: integer, example: 32 }
+                      weak_topics:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            topic:
+                              type: object
+                              properties:
+                                _id: { $ref: '#/components/schemas/ObjectId' }
+                                name: { type: string, example: Quadratic Equations }
+                            subject: { $ref: '#/components/schemas/NameAndCode' }
+                            weak_count: { type: integer, example: 9 }
+                            rated_count: { type: integer, example: 14 }
+                      assignments:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Assignment'
+                            - type: object
+                              properties:
+                                is_open: { type: boolean }
+                                student_count: { type: integer, example: 30 }
+                                completed_count: { type: integer, example: 18 }
+                                average_percentage: { type: number, nullable: true, example: 64.5 }
+                                students:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      _id: { $ref: '#/components/schemas/ObjectId' }
+                                      full_name: { type: string, example: Ada Obi }
+                                      status:
+                                        {
+                                          type: string,
+                                          enum: [not_started, in_progress, completed, missed],
+                                        }
+                                      raw_score: { type: integer, nullable: true, example: 15 }
+                                      total_questions: { type: integer, example: 20 }
+                                      percentage: { type: number, nullable: true, example: 75 }
+                                      submitted_at:
+                                        { type: string, format: date-time, nullable: true }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Not found, or it belongs to another teacher
+          content:
+            application/json:
+              example: { error: { code: CLASS_NOT_FOUND, message: This class was not found } }
+
+  /classes/{id}/results/export:
+    get:
+      tags: [Classes]
+      summary: Download class results as a CSV file (the class's own teacher)
+      description: |
+        The same results as above for every assignment, one row per student per assignment.
+        Dates are in Lagos time. Opens in Excel or Google Sheets. In Swagger, use "Download file".
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: 'The file, e.g. `ss3-maths-results.csv`'
+          headers:
+            Content-Disposition:
+              schema: { type: string, example: 'attachment; filename="ss3-maths-results.csv"' }
+          content:
+            text/csv:
+              schema: { type: string }
+              example: |
+                Assignment,Subject,Topic,Type,Deadline (Lagos time),Student,Status,Score,Out of,Percentage,Submitted (Lagos time)
+                Week 3 test,Mathematics,All topics,Timed,2026-12-05 18:00,Ada Obi,Completed,15,20,75,2026-12-04 16:42
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Not found, or it belongs to another teacher
+          content:
+            application/json:
+              example: { error: { code: CLASS_NOT_FOUND, message: This class was not found } }
+
   # ---------- Admin users ----------
 
   /admin/teachers:
