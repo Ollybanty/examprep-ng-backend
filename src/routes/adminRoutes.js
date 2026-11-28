@@ -9,6 +9,7 @@ import {
   inviteAdminRules,
   listUsersRules,
   updateUserRules,
+  analyticsRules,
 } from '../validators/adminValidators.js';
 import { createQuestion } from '../controllers/admin/createQuestion.js';
 import { listAdminQuestions } from '../controllers/admin/listAdminQuestions.js';
@@ -86,6 +87,13 @@ router.patch(
   validate,
   updateUser,
 );
-router.get('/admin/analytics', requireAuth, requireRole(ROLES.ADMIN), getUsageAnalytics);
+router.get(
+  '/admin/analytics',
+  requireAuth,
+  requireRole(ROLES.ADMIN),
+  analyticsRules,
+  validate,
+  getUsageAnalytics,
+);
 
 export default router;
