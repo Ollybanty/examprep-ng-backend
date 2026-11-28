@@ -25,6 +25,8 @@ export const env = {
   emailAppPassword: process.env.EMAIL_APP_PASSWORD || '',
   emailFromName: process.env.EMAIL_FROM_NAME || 'ExamPrep NG',
   brevoApiKey: process.env.BREVO_API_KEY || '',
+  // Empty shows the name as text instead of a logo
+  emailLogoUrl: process.env.EMAIL_LOGO_URL || '',
   adminName: process.env.ADMIN_NAME || '',
   adminEmail: process.env.ADMIN_EMAIL || '',
   adminPassword: process.env.ADMIN_PASSWORD || '',

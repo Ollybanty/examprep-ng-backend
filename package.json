@@ -12,7 +12,8 @@
     "seed:admin": "node scripts/seedAdmin.js",
     "seed:taxonomy": "node scripts/seedTaxonomy.js",
     "seed:dev-users": "node scripts/seedDevUsers.js",
-    "seed:dev-questions": "node scripts/seedDevQuestions.js"
+    "seed:dev-questions": "node scripts/seedDevQuestions.js",
+    "preview:emails": "node scripts/previewEmails.js"
   },
   "keywords": [],
   "author": "",
