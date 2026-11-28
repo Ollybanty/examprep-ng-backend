@@ -27,6 +27,8 @@ app.use(
       console.warn(`CORS blocked: ${origin} (add it to CORS_ORIGINS to allow it)`);
       return callback(null, false);
     },
+    // Lets the frontend read the file name of a download, like the class results CSV
+    exposedHeaders: ['Content-Disposition'],
   }),
 );
 
