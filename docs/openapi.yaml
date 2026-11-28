@@ -496,6 +496,45 @@ paths:
                     items: { $ref: '#/components/schemas/Exam' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
 
+  /years:
+    get:
+      tags: [Catalog]
+      summary: List the past question years for an exam and subject
+      description: |
+        The years that have published questions, newest first, with how many questions each year has.
+        Use it for the year picker before starting a practice session with `year`.
+        Questions without a year are left out. An exam or subject with no questions returns an empty list.
+      parameters:
+        - name: exam_id
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/ObjectId' }
+        - name: subject_id
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/ObjectId' }
+        - name: topic_id
+          in: query
+          description: Only count questions in this topic
+          schema: { $ref: '#/components/schemas/ObjectId' }
+      responses:
+        '200':
+          description: Years, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        year: { type: integer, example: 2023 }
+                        question_count: { type: integer, example: 40 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
   # ---------- Sessions ----------
 
   /sessions:
