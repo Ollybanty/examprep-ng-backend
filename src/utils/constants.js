@@ -58,6 +58,14 @@ export const MASTERY_STATUS = {
   STRONG: 'strong',
 };
 
+// A student's progress on an assignment, worked out from their session
+export const ASSIGNMENT_STATUS = {
+  NOT_STARTED: 'not_started',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  MISSED: 'missed', // the deadline passed before they started
+};
+
 export const REPORT_STATUS = {
   OPEN: 'open',
   RESOLVED: 'resolved',
@@ -85,6 +93,7 @@ export const RULES = {
   PRACTICE_MAX_QUESTIONS: 40,
   QUOTA_TIMEZONE: 'Africa/Lagos', // quotas reset at midnight Lagos time (DEC 05)
   JOIN_CODE_LENGTH: 6,
+  ASSIGNMENT_MAX_QUESTIONS: 100,
   ADMIN_INVITE_EXPIRY_HOURS: 48,
   PAGE_LIMIT_DEFAULT: 20, // items per page when the app doesn't say
   PAGE_LIMIT_MAX: 100,

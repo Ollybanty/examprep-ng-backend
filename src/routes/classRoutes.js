@@ -7,6 +7,8 @@ import {
   createClassRules,
   joinClassRules,
   listClassStudentsRules,
+  createAssignmentRules,
+  listAssignmentsRules,
 } from '../validators/classValidators.js';
 import { createClass } from '../controllers/classes/createClass.js';
 import { listMyClasses } from '../controllers/classes/listMyClasses.js';
@@ -46,11 +48,20 @@ router.get(
   validate,
   listClassStudents,
 );
-router.post('/classes/:id/assignments', requireAuth, requireApprovedTeacher, createAssignment);
+router.post(
+  '/classes/:id/assignments',
+  requireAuth,
+  requireApprovedTeacher,
+  createAssignmentRules,
+  validate,
+  createAssignment,
+);
 router.get(
   '/classes/:id/assignments',
   requireAuth,
   requireRole(ROLES.TEACHER, ROLES.STUDENT),
+  listAssignmentsRules,
+  validate,
   listAssignments,
 );
 router.get('/classes/:id/results', requireAuth, requireApprovedTeacher, getClassResults);

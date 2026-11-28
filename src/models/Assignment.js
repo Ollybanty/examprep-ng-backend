@@ -15,6 +15,8 @@ const assignmentSchema = new Schema(
     mode: { type: String, enum: Object.values(SESSION_MODES), default: SESSION_MODES.PRACTICE },
     question_count: { type: Number, required: true, min: 1, max: 100 },
     question_ids: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+    // CBT only, worked out from the exam's pace
+    duration_minutes: { type: Number, default: null },
     deadline: { type: Date, required: true },
   },
   TIMESTAMPS,
