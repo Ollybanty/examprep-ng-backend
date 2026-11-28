@@ -28,6 +28,8 @@ const answerSchema = new Schema(
 answerSchema.index({ session: 1, question: 1 }, { unique: true });
 // Mastery: a student's answers in a topic, newest first
 answerSchema.index({ user: 1, topic: 1, answered_at: -1 });
+// Admin analytics: answers in the last few days
+answerSchema.index({ answered_at: -1 });
 
 answerSchema.set('toJSON', {
   transform: (doc, ret) => {

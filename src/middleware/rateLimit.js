@@ -25,6 +25,8 @@ export const resendOtpLimiter = limiter(5, 15);
 export const forgotPasswordLimiter = limiter(5, 15);
 export const resetPasswordLimiter = limiter(10, 15);
 export const acceptInviteLimiter = limiter(10, 15);
+// Slows down anyone guessing join codes
+export const joinClassLimiter = limiter(20, 15);
 // Only wrong docs logins count. Successful loads, and requests the browser sends before
 // it has the login (one per page file), are skipped so a normal visit never hits the limit.
 export const docsLoginLimiter = limiter(10, 15, {

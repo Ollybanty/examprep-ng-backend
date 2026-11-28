@@ -1,4 +1,5 @@
 // to be handled by: Oladele Ogunyemi
+import { Session } from '../models/index.js';
 import { RULES, SESSION_MODES, SESSION_STATUS } from '../utils/constants.js';
 import { finishSession } from './sessionService.js';
 
@@ -27,4 +28,17 @@ export async function autoSubmitIfExpired(session) {
     return finishSession(session, SESSION_STATUS.AUTO_SUBMITTED);
   }
   return session;
+}
+
+// Returns the student's running CBT mock, or null. A mock whose time ran out is submitted first.
+export async function findRunningMock(userId) {
+  const running = await Session.findOne({
+    user: userId,
+    mode: SESSION_MODES.CBT,
+    status: SESSION_STATUS.IN_PROGRESS,
+  });
+  if (!running) return null;
+
+  const current = await autoSubmitIfExpired(running);
+  return current.status === SESSION_STATUS.IN_PROGRESS ? current : null;
 }

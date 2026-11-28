@@ -1,5 +1,5 @@
 import { body, query } from 'express-validator';
-import { ROLES, TEACHER_STATUS, PLAN_TIERS } from '../utils/constants.js';
+import { ROLES, TEACHER_STATUS, PLAN_TIERS, RULES } from '../utils/constants.js';
 import { idParamRule, paginationRules } from './commonValidators.js';
 
 export const listTeachersRules = [
@@ -51,4 +51,12 @@ export const updateUserRules = [
     .optional()
     .isIn(Object.values(PLAN_TIERS))
     .withMessage('plan_tier must be "free" or "pro"'),
+];
+
+export const analyticsRules = [
+  query('days')
+    .optional()
+    .isInt({ min: 1, max: RULES.ANALYTICS_MAX_DAYS })
+    .withMessage(`days must be between 1 and ${RULES.ANALYTICS_MAX_DAYS}`)
+    .toInt(),
 ];

@@ -63,6 +63,7 @@ export async function buildSessionView(session) {
     _id: session._id,
     mode: session.mode,
     status: session.status,
+    assignment: session.assignment ?? null,
     exam: session.exam,
     subject: session.subject,
     filters: session.filters,
