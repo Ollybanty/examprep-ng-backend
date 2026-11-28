@@ -30,6 +30,8 @@ tags:
     description: Practice sessions and CBT mocks (students only)
   - name: Analytics
     description: How a student is doing per topic (students only)
+  - name: Classes
+    description: Teachers create classes, students join them with a code
   - name: Admin users
     description: Teacher approval, admin invites and user management (admins only)
 
@@ -901,6 +903,166 @@ paths:
             application/json:
               example: { error: { code: SUBJECT_NOT_FOUND, message: This subject was not found } }
 
+  # ---------- Classes ----------
+
+  /classes:
+    post:
+      tags: [Classes]
+      summary: Create a class (approved teachers)
+      description: |
+        Creates a class and gives it a 6 character join code, e.g. `PHY7K2`, for the teacher to
+        share with students. Codes never use 0, O, 1 or I, so they are easy to read out loud.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 100, example: SS3 Physics }
+                subject_id: { $ref: '#/components/schemas/ObjectId' }
+      responses:
+        '201':
+          description: Class created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/TeacherClass' }
+                  message:
+                    { type: string, example: Class created. Share the join code with your students }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: Not a teacher (`FORBIDDEN`), or the teacher isn't approved yet (`TEACHER_NOT_APPROVED`)
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: TEACHER_NOT_APPROVED,
+                      message: Your teacher account is waiting for admin approval,
+                    },
+                }
+        '404':
+          description: The subject doesn't exist
+          content:
+            application/json:
+              example: { error: { code: SUBJECT_NOT_FOUND, message: This subject was not found } }
+    get:
+      tags: [Classes]
+      summary: List my classes
+      description: |
+        **Teachers** get the classes they created, newest first, each with its `join_code` and
+        `student_count`. **Students** get the classes they joined, newest join first, with the
+        teacher's name. Closed classes are left out for students. Not paginated.
+      responses:
+        '200':
+          description: The classes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      oneOf:
+                        - $ref: '#/components/schemas/TeacherClass'
+                        - $ref: '#/components/schemas/StudentClass'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /classes/join:
+    post:
+      tags: [Classes]
+      summary: Join a class with a code (students)
+      description: |
+        The code isn't case sensitive and spaces around it are ignored, so `phy7k2 ` works.
+        Limited to 20 tries every 15 minutes, to stop anyone guessing codes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [join_code]
+              properties:
+                join_code: { type: string, example: PHY7K2 }
+      responses:
+        '201':
+          description: Joined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      class: { $ref: '#/components/schemas/StudentClass' }
+                      joined_at: { type: string, format: date-time }
+                  message: { type: string, example: You joined SS3 Physics }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No open class has this code
+          content:
+            application/json:
+              example:
+                {
+                  error:
+                    {
+                      code: INVALID_JOIN_CODE,
+                      message: This join code is not valid. Check it and try again,
+                    },
+                }
+        '409':
+          description: Already in this class. The app can open the class as normal.
+          content:
+            application/json:
+              example: { error: { code: ALREADY_JOINED, message: You are already in this class } }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /classes/{id}/students:
+    get:
+      tags: [Classes]
+      summary: The students in a class (the class's own teacher)
+      description: Newest join first. Only each student's name is shared, never their email.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of students
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id: { $ref: '#/components/schemas/ObjectId' }
+                        full_name: { type: string, example: Ada Obi }
+                        joined_at: { type: string, format: date-time }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Not found, or it belongs to another teacher
+          content:
+            application/json:
+              example: { error: { code: CLASS_NOT_FOUND, message: This class was not found } }
+
   # ---------- Admin users ----------
 
   /admin/teachers:
@@ -1105,6 +1267,34 @@ components:
         code: { type: string, example: JAMB }
         cbt_duration_minutes: { type: integer, example: 30 }
         cbt_question_count: { type: integer, example: 40 }
+
+    TeacherClass:
+      type: object
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        name: { type: string, example: SS3 Physics }
+        subject:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/NameAndCode' }]
+        join_code: { type: string, example: PHY7K2 }
+        is_active: { type: boolean, example: true }
+        student_count: { type: integer, example: 32 }
+        created_at: { type: string, format: date-time }
+
+    StudentClass:
+      type: object
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        name: { type: string, example: SS3 Physics }
+        subject:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/NameAndCode' }]
+        teacher:
+          type: object
+          properties:
+            _id: { $ref: '#/components/schemas/ObjectId' }
+            full_name: { type: string, example: Mrs Bello }
+        joined_at: { type: string, format: date-time, description: Only in GET /classes }
 
     User:
       type: object
